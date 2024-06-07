@@ -41,7 +41,7 @@ artdaq::ArtdaqMetadata artdaq::MetadataFragment::get_metadata()
 	return output;
 }
 
-artdaq::FragmentPtr artdaq::MetadataFragment::CreateMetadataFragment(artdaq::ArtdaqMetadata metadata, artdaq::Fragment::type_t type, artdaq::Fragment::sequence_id_t seqID, artdaq::Fragment::timestamp_t ts)
+artdaq::FragmentPtr artdaq::MetadataFragment::CreateMetadataFragment(artdaq::ArtdaqMetadata metadata, artdaq::Fragment::type_t type, artdaq::Fragment::sequence_id_t seqID, artdaq::Fragment::timestamp_t ts, Fragment::fragment_id_t id)
 {
 	size_t fragmentSizeBytes = sizeof(size_t) * 4 + sizeof(metadata.rank) + metadata.fragment_ids.size() * sizeof(uint16_t) + (metadata.metadata_tag.size() + 1) + (metadata.metadata_string.size() + 1);
 
@@ -51,6 +51,7 @@ artdaq::FragmentPtr artdaq::MetadataFragment::CreateMetadataFragment(artdaq::Art
 	frag->setSystemType(type);
 	frag->setSequenceID(seqID);
 	frag->setTimestamp(ts);
+	frag->setFragmentID(id);
 
 	uint8_t* ptr = reinterpret_cast<uint8_t*>(frag->dataBegin());
 

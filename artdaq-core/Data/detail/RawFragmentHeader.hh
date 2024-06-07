@@ -73,14 +73,7 @@ struct artdaq::detail::RawFragmentHeader
 	 */
 	static std::map<type_t, std::string> MakeSystemTypeMap()
 	{
-		return std::map<type_t, std::string>{
-		    {type_t(DataFragmentType), "Data"},
-		    {type_t(EndOfRunDataFragmentType), "EndOfRunData"},
-		    {type_t(EndOfSubrunDataFragmentType), "EndOfSubrunData"},
-		    {type_t(EmptyFragmentType), "Empty"},
-		    {type_t(ErrorFragmentType), "Error"},
-		    {type_t(InvalidFragmentType), "Invalid"},
-		    {232, "Container"}};
+		return MakeVerboseSystemTypeMap();
 	}
 
 	/**
