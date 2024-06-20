@@ -144,21 +144,21 @@ public:
 	static constexpr fragment_id_t InvalidFragmentID = detail::RawFragmentHeader::InvalidFragmentID;  ///< Copy InvalidFragmentID from RawFragmentHeader
 	static constexpr timestamp_t InvalidTimestamp = detail::RawFragmentHeader::InvalidTimestamp;      ///< Copy InvalidTimestamp from RawFragmentHeader
 
-	static constexpr type_t InvalidFragmentType = detail::RawFragmentHeader::InvalidFragmentType;                  ///< Copy InvalidFragmentType from RawFragmentHeader
-	static constexpr type_t EndOfDataFragmentType = detail::RawFragmentHeader::EndOfDataFragmentType;              ///< Copy EndOfDataFragmentType from RawFragmentHeader
-	static constexpr type_t DataFragmentType = detail::RawFragmentHeader::DataFragmentType;                        ///< Copy DataFragmentType from RawFragmentHeader
-	static constexpr type_t InitFragmentType = detail::RawFragmentHeader::InitFragmentType;                        ///< Copy InitFragmentType from RawFragmentHeader
-	static constexpr type_t EndOfRunFragmentType = detail::RawFragmentHeader::EndOfRunFragmentType;                ///< Copy EndOfRunFragmentType from RawFragmentHeader
-	static constexpr type_t EndOfSubrunFragmentType = detail::RawFragmentHeader::EndOfSubrunFragmentType;          ///< Copy EndOfSubrunFragmentType from RawFragmentHeader
-	static constexpr type_t ShutdownFragmentType = detail::RawFragmentHeader::ShutdownFragmentType;                ///< Copy ShutdownFragmentType from RawFragmentHeader
-	static constexpr type_t FirstUserFragmentType = detail::RawFragmentHeader::FIRST_USER_TYPE;                    ///< Copy FIRST_USER_TYPE from RawFragmentHeader
-	static constexpr type_t EmptyFragmentType = detail::RawFragmentHeader::EmptyFragmentType;                      ///< Copy EmptyFragmentType from RawFragmentHeader
-	static constexpr type_t ContainerFragmentType = detail::RawFragmentHeader::ContainerFragmentType;              ///< Copy ContainerFragmentType from RawFragmentHeader
-	static constexpr type_t ErrorFragmentType = detail::RawFragmentHeader::ErrorFragmentType;                      ///< Copy ErrorFragmentType from RawFragmentHeader
-	static constexpr type_t StartOfRunFragmentType = detail::RawFragmentHeader::StartOfRunFragmentType;            ///< Copy StartOfRunFragmentType from RawFragmentHeader
-	static constexpr type_t StartOfSubrunFragmentType = detail::RawFragmentHeader::StartOfSubrunFragmentType;      ///< Copy StartOfSubrunFragmentType from RawFragmentHeader
-	static constexpr type_t EndOfRunDataFragmentType = detail::RawFragmentHeader::EndOfRunDataFragmentType;        ///< Copy EndOfRunDataFragmentType from RawFragmentHeader
-	static constexpr type_t EndOfSubrunDataFragmentType = detail::RawFragmentHeader::EndOfSubrunDataFragmentType;  ///< Copy EndOfSubrunDataFragmentType from RawFragmentHeader
+	static constexpr type_t InvalidFragmentType = detail::RawFragmentHeader::InvalidFragmentType;              ///< Copy InvalidFragmentType from RawFragmentHeader
+	static constexpr type_t EndOfDataFragmentType = detail::RawFragmentHeader::EndOfDataFragmentType;          ///< Copy EndOfDataFragmentType from RawFragmentHeader
+	static constexpr type_t DataFragmentType = detail::RawFragmentHeader::DataFragmentType;                    ///< Copy DataFragmentType from RawFragmentHeader
+	static constexpr type_t InitFragmentType = detail::RawFragmentHeader::InitFragmentType;                    ///< Copy InitFragmentType from RawFragmentHeader
+	static constexpr type_t EndOfRunFragmentType = detail::RawFragmentHeader::EndOfRunFragmentType;            ///< Copy EndOfRunFragmentType from RawFragmentHeader
+	static constexpr type_t EndOfSubrunFragmentType = detail::RawFragmentHeader::EndOfSubrunFragmentType;      ///< Copy EndOfSubrunFragmentType from RawFragmentHeader
+	static constexpr type_t ShutdownFragmentType = detail::RawFragmentHeader::ShutdownFragmentType;            ///< Copy ShutdownFragmentType from RawFragmentHeader
+	static constexpr type_t FirstUserFragmentType = detail::RawFragmentHeader::FIRST_USER_TYPE;                ///< Copy FIRST_USER_TYPE from RawFragmentHeader
+	static constexpr type_t EmptyFragmentType = detail::RawFragmentHeader::EmptyFragmentType;                  ///< Copy EmptyFragmentType from RawFragmentHeader
+	static constexpr type_t ContainerFragmentType = detail::RawFragmentHeader::ContainerFragmentType;          ///< Copy ContainerFragmentType from RawFragmentHeader
+	static constexpr type_t ErrorFragmentType = detail::RawFragmentHeader::ErrorFragmentType;                  ///< Copy ErrorFragmentType from RawFragmentHeader
+	static constexpr type_t StartOfRunFragmentType = detail::RawFragmentHeader::StartOfRunFragmentType;        ///< Copy StartOfRunFragmentType from RawFragmentHeader
+	static constexpr type_t StartOfSubrunFragmentType = detail::RawFragmentHeader::StartOfSubrunFragmentType;  ///< Copy StartOfSubrunFragmentType from RawFragmentHeader
+	static constexpr type_t RunDataFragmentType = detail::RawFragmentHeader::RunDataFragmentType;              ///< Copy RunDataFragmentType from RawFragmentHeader
+	static constexpr type_t SubrunDataFragmentType = detail::RawFragmentHeader::SubrunDataFragmentType;        ///< Copy SubrunDataFragmentType from RawFragmentHeader
 
 	/**
 	 * \brief Returns whether the given type is in the range of user types
@@ -188,6 +188,15 @@ public:
 	static std::map<type_t, std::string> MakeSystemTypeMap()
 	{
 		return detail::RawFragmentHeader::MakeSystemTypeMap();
+	}
+
+	/**
+	 * \brief Returns a map of all system types
+	 * \return A map of all defined system types
+	 */
+	static std::map<type_t, std::string> MakeVerboseSystemTypeMap()
+	{
+		return detail::RawFragmentHeader::MakeVerboseSystemTypeMap();
 	}
 
 	typedef DATAVEC_T::reference reference;              ///< Alias reference type from QuickVec<RawDataType>
@@ -827,8 +836,8 @@ inline bool constexpr artdaq::Fragment::isBroadcastFragmentType(type_t fragmentT
 			case ShutdownFragmentType:
 			case StartOfRunFragmentType:
 			case StartOfSubrunFragmentType:
-			case EndOfRunDataFragmentType:
-			case EndOfSubrunDataFragmentType:
+			case RunDataFragmentType:
+			case SubrunDataFragmentType:
 				return true;
 			default:
 				return false;
