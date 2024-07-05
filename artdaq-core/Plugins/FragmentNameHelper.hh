@@ -87,6 +87,10 @@ public:
 	virtual std::string GetInstanceNameForType(artdaq::Fragment::type_t type_id) const
 	{
 		if (type_map_.count(type_id) > 0) { return type_map_.at(type_id); }
+
+		auto systemTypes = artdaq::Fragment::MakeVerboseSystemTypeMap();
+		if (systemTypes.count(type_id) > 0) { return systemTypes.at(type_id); }
+
 		return unidentified_instance_name_;
 	}
 
@@ -154,9 +158,17 @@ public:
 		}
 		else
 		{
-			TLOG(TLVL_DEBUG + 33) << "Could not find match for Fragment type " << static_cast<int>(fragment.type()) << ", returning " << unidentified_instance_name_;
-			instance_name = unidentified_instance_name_;
-			success_code = false;
+			auto systemTypes = artdaq::Fragment::MakeVerboseSystemTypeMap();
+			if (systemTypes.count(fragment.type())) {
+				TLOG(TLVL_DEBUG + 33) << "Matched fragment type " << static_cast<int>(fragment.type()) << " to extended system type " << systemTypes.at(fragment.type());
+				instance_name = systemTypes.at(fragment.type());
+			}
+			else
+			{
+				TLOG(TLVL_DEBUG + 33) << "Could not find match for Fragment type " << static_cast<int>(fragment.type()) << ", returning " << unidentified_instance_name_;
+				instance_name = unidentified_instance_name_;
+				success_code = false;
+			}
 		}
 
 		return std::make_pair(success_code, instance_name);
