@@ -60,8 +60,23 @@ jobs:
         cd /opt/artdaq
         source /opt/artdaq/setupARTDAQDEMO || exit 1
         
+        echo "Checking out develop"
+        spack cd --env
+        for pkg in */;do 
+            echo "Updating package \$pkg"
+            cd \$pkg
+            git stash
+            git checkout develop
+            git stash pop
+            git pull
+            cd ..
+        done
+        cd /opt/artdaq
+
         export REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
-        cp -pr /scratch/art-daq/$REPO srcs
+        echo "Copying /scratch/art-daq/\$REPO to environment"
+        spack cd --env
+        cp -pr /scratch/art-daq/\$REPO .
 
         echo "Starting build"
         spack install 2>&1 | tee /scratch/art-daq/build.log
