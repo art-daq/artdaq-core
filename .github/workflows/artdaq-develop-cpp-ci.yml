@@ -20,4 +20,4 @@ on:
 
 jobs:
   build_against_dev_release:
-    uses: art-daq/artdaq-github/.github/workflows/artdaq-develop-cpp-ci.yml@stable
+    uses: art-daq/.github/.github/workflows/artdaq-develop-cpp-ci.yml@stable
