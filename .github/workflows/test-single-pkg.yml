@@ -1,14 +1,15 @@
 name: Test Single Pkg Workflow
 
 on:
+  push:
+    branches: 
+      - develop
+    paths-ignore:
+      - 'docs/**'
+      - '.github/**'
+  pull_request:
+    branches: [ develop ]
   workflow_dispatch:
-    inputs:
-      build-type:
-        description: 'build type, d or p'
-        default: 'd'
-      quals:
-        description: 'qualifiers'
-        default: 's128:e20'
 
 jobs:
 
