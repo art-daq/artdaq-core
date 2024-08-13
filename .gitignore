@@ -1,5 +1,12 @@
+*#
 *~
+*.tmproj
 .editorconfig
 bin/*
 obj/*
 *.vcxproj*
+core.*
+spack-build-*
+spack-configure-*
+build-linux-*
+

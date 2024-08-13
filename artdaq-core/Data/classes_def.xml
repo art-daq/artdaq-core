@@ -32,4 +32,8 @@
     <class name="art::ParentageMap"/>
     <class name="std::pair<const art::ParentageID, art::Parentage>"/>
     <class name="std::pair<art::ParentageID, art::Parentage>"/>
+    <class name="artdaq::ArtdaqMetadata"/>
+      <class name="art::Wrapper<artdaq::ArtdaqMetadata>"/>
+    <class name="std::vector<artdaq::ArtdaqMetadata>"/>
+      <class name="art::Wrapper<std::vector<artdaq::ArtdaqMetadata>>"/>
 </lcgdict>

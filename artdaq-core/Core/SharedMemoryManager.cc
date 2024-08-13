@@ -165,6 +165,16 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 	last_seen_id_ = 0;
 	size_t shmSize = requested_shm_parameters_.buffer_count * (requested_shm_parameters_.buffer_size + sizeof(ShmBuffer)) + sizeof(ShmStruct);
 
+	auto available = GetAvailableRAM();
+
+	TLOG(TLVL_INFO) << "Requested shared memory size " << PrintBytes(shmSize)
+	                << " (" << requested_shm_parameters_.buffer_count << " buffers * " << PrintBytes(requested_shm_parameters_.buffer_size) << ")"
+	                << ", available RAM " << PrintBytes(available);
+	if (shmSize > 0.8 * available)
+	{
+		TLOG(TLVL_WARNING) << "Requested shared memory size is greater than 80% of available RAM! Allocation of shared memory will likely fail!";
+	}
+
 	// 19-Feb-2019, KAB: separating out the determination of whether a given process owns the shared
 	// memory (indicated by manager_id_ == 0) and whether or not the shared memory already exists.
 	if (requested_shm_parameters_.buffer_count > 0 && requested_shm_parameters_.buffer_size > 0 && manager_id_ <= 0)
@@ -669,7 +679,7 @@ bool artdaq::SharedMemoryManager::ReadyForRead()
 	{
 		return false;
 	}
-	TLOG(TLVL_READREADY)  << std::hex << std::showbase << shm_key_ << " ReadyForRead BEGIN" << std::dec;
+	TLOG(TLVL_READREADY) << std::hex << std::showbase << shm_key_ << " ReadyForRead BEGIN" << std::dec;
 	std::unique_lock<std::mutex> lk(search_mutex_);
 	// TraceLock lk(search_mutex_, 14, "ReadyForReadSearch");
 
@@ -682,7 +692,7 @@ bool artdaq::SharedMemoryManager::ReadyForRead()
 		auto buffer = (rp + ii) % shm_ptr_->buffer_count;
 
 #ifndef __OPTIMIZE__
-		TLOG(TLVL_READREADY + 1)  << std::hex << std::showbase << shm_key_ << std::dec << " ReadyForRead: Checking if buffer " << buffer << " is stale.";
+		TLOG(TLVL_READREADY + 1) << std::hex << std::showbase << shm_key_ << std::dec << " ReadyForRead: Checking if buffer " << buffer << " is stale.";
 #endif
 		ResetBuffer(buffer);
 		auto buf = getBufferInfo_(buffer);
@@ -712,7 +722,7 @@ bool artdaq::SharedMemoryManager::ReadyForWrite(bool overwrite)
 	{
 		return false;
 	}
-	TLOG(TLVL_WRITEREADY)  << std::hex << std::showbase << shm_key_ << " ReadyForWrite BEGIN" << std::dec;
+	TLOG(TLVL_WRITEREADY) << std::hex << std::showbase << shm_key_ << " ReadyForWrite BEGIN" << std::dec;
 
 	std::lock_guard<std::mutex> lk(search_mutex_);
 	// TraceLock lk(search_mutex_, 15, "ReadyForWriteSearch");

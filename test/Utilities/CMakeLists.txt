@@ -1,11 +1,11 @@
-cet_test(TimeUtils_t USE_BOOST_UNIT
+cet_test(TimeUtils_t USE_BOOST_UNIT INSTALL_BIN
 	LIBRARIES PRIVATE
   artdaq-core_Utilities
   cetlib::headers
   TRACE::MF
 )
 
-cet_test(ExceptionHandler_t USE_BOOST_UNIT
+cet_test(ExceptionHandler_t USE_BOOST_UNIT INSTALL_BIN
 	LIBRARIES PRIVATE
   artdaq-core_Utilities
 	canvas::canvas
@@ -14,7 +14,7 @@ cet_test(ExceptionHandler_t USE_BOOST_UNIT
   TRACE::MF
 )
 
-cet_test(SimpleLookupPolicy_t USE_BOOST_UNIT
+cet_test(SimpleLookupPolicy_t USE_BOOST_UNIT INSTALL_BIN
 	DATAFILES fcl/LookupTarget.fcl
 	LIBRARIES PRIVATE
   artdaq-core_Utilities
@@ -24,14 +24,14 @@ cet_test(SimpleLookupPolicy_t USE_BOOST_UNIT
   Boost::filesystem
 )
 
-cet_test(ExceptionStackTrace_t USE_BOOST_UNIT
+cet_test(ExceptionStackTrace_t USE_BOOST_UNIT INSTALL_BIN
 	LIBRARIES PRIVATE
   artdaq-core_Utilities_ExceptionStackTrace
   cetlib::headers
   TRACE::MF
 )
 
-cet_test(configureMessageFacility_t USE_BOOST_UNIT
+cet_test(configureMessageFacility_t USE_BOOST_UNIT INSTALL_BIN
 	LIBRARIES PRIVATE
   artdaq-core_Utilities
   fhiclcpp::fhiclcpp
@@ -41,7 +41,7 @@ cet_test(configureMessageFacility_t USE_BOOST_UNIT
   Boost::filesystem
 )
 
-cet_test(GenFile_t USE_BOOST_UNIT
+cet_test(GenFile_t USE_BOOST_UNIT INSTALL_BIN
 	LIBRARIES PRIVATE
   artdaq-core_Utilities
   messagefacility::MF_MessageLogger

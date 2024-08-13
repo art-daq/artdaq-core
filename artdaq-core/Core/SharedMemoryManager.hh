@@ -3,11 +3,14 @@
 
 #include <atomic>
 #include <deque>
+#include <iomanip>
 #include <list>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <vector>
 #include "artdaq-core/Utilities/TimeUtils.hh"
+#include "sys/sysinfo.h"
 
 namespace artdaq {
 /**
@@ -352,6 +355,43 @@ public:
 	 * \brief Touch the given buffer (update its last_touch_time)
 	 */
 	void TouchBuffer(int buffer) { return touchBuffer_(getBufferInfo_(buffer)); }
+
+	static uint64_t GetAvailableRAM()
+	{
+		struct sysinfo meminfo;
+		auto err = sysinfo(&meminfo);
+		if (err == 0)
+		{
+			return meminfo.freeram * meminfo.mem_unit;
+		}
+		return 0;
+	}
+
+	static std::string PrintBytes(uint64_t bytes)
+	{
+		double print = bytes / 1024.0 / 1024.0 / 1024.0;
+		std::string unit = "GB";
+		if (bytes < 1024)
+		{
+			print = bytes;
+			unit = "B";
+		}
+		else if (bytes < 1024 * 1024)
+		{
+			print = bytes / 1024.0;
+			unit = "KB";
+		}
+		else if (bytes < 1024 * 1024 * 1024)
+		{
+			print = bytes / 1024.0 / 1024.0;
+			unit = "MB";
+		}
+
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(4) << print << " " << unit;
+
+		return ss.str();
+	}
 
 private:
 	SharedMemoryManager(SharedMemoryManager const&) = delete;

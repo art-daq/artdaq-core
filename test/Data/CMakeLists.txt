@@ -1,23 +1,23 @@
 
-cet_test(Fragment_t USE_BOOST_UNIT
+cet_test(Fragment_t USE_BOOST_UNIT INSTALL_BIN
   LIBRARIES PRIVATE
   artdaq-core_Data
   cetlib::headers
 )
 
-cet_test(ContainerFragment_t USE_BOOST_UNIT
+cet_test(ContainerFragment_t USE_BOOST_UNIT INSTALL_BIN
   LIBRARIES PRIVATE
   artdaq-core_Data
   cetlib::headers
 )
 
-cet_test(RawEvent_t USE_BOOST_UNIT
+cet_test(RawEvent_t USE_BOOST_UNIT INSTALL_BIN
   LIBRARIES PRIVATE
   artdaq-core_Data
   cetlib::headers
 )
 
-cet_test(BuildInfo_t USE_BOOST_UNIT
+cet_test(BuildInfo_t USE_BOOST_UNIT INSTALL_BIN
   LIBRARIES PRIVATE
   artdaq-core_Data
   cetlib::headers

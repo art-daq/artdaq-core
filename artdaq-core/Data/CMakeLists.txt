@@ -1,6 +1,7 @@
 cet_make_library(SOURCE
   Fragment.cc
   RawEvent.cc
+  MetadataFragment.cc
   LIBRARIES
   PUBLIC
   artdaq_core::artdaq-core_Utilities
