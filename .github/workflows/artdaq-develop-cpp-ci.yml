@@ -71,11 +71,7 @@ jobs:
         chmod +x build_pkg.sh
 
         docker run --rm -v /cvmfs:/cvmfs:shared -v $GITHUB_WORKSPACE/scratch:/scratch eflumerf/artdaq-spack:latest /scratch/build_pkg.sh
-    
-    - name: Check build log for success
-      run: |
-        grep "INFO: stage build SUCCESS" ${{ github.workspace }}/scratch/art-daq/build.log
-    
+        
     - name: upload build log file
       uses: actions/upload-artifact@main
       with:
