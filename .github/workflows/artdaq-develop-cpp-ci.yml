@@ -57,22 +57,20 @@ jobs:
         cat << EOT > build_pkg.sh
         #!/bin/bash
         
-        cd /opt/otsdaq
-        source /opt/otsdaq/products/setup
-        source /opt/otsdaq/setup_ots.sh || exit 1
-        mrb updateSource
+        cd /opt/artdaq
+        source /opt/artdaq/setupARTDAQDEMO || exit 1
         
         export REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
         cp -pr /scratch/art-daq/$REPO srcs
 
         echo "Starting build"
-        mrb b 2>&1 | tee /scratch/art-daq/build.log
+        spack install 2>&1 | tee /scratch/art-daq/build.log
         
-        exit $?
+        exit \$?
         EOT
         chmod +x build_pkg.sh
 
-        docker run --rm -v /cvmfs:/cvmfs:shared -v $GITHUB_WORKSPACE/scratch:/scratch eflumerf/artdaq-suite:latest /scratch/build_pkg.sh
+        docker run --rm -v /cvmfs:/cvmfs:shared -v $GITHUB_WORKSPACE/scratch:/scratch eflumerf/artdaq-spack:latest /scratch/build_pkg.sh
     
     - name: Check build log for success
       run: |
