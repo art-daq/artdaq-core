@@ -2,9 +2,8 @@ name: Build Single Pkg Workflow
 
 on:
   push:
-    branches-ignore: 
+    branches: 
       - develop
-      - stable
     paths-ignore:
       - 'docs/**'
       - '.github/**'
