@@ -9,7 +9,7 @@ artdaq::ArtdaqMetadata artdaq::MetadataFragment::get_metadata()
 	size_t element_size = *reinterpret_cast<size_t const*>(ptr);
 	ptr += sizeof(size_t);
 	assert(element_size == sizeof(output.rank));
-	output.rank = *reinterpret_cast<typeof(output.rank) const*>(ptr);
+	output.rank = *reinterpret_cast<int const*>(ptr);
 	ptr += element_size;
 	
 	element_size = *reinterpret_cast<size_t const*>(ptr);
