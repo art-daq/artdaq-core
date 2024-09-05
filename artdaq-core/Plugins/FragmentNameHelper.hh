@@ -152,7 +152,17 @@ public:
 				auto contained_type = type_map_.find(cf.fragment_type());
 				if (contained_type != type_map_end)
 				{
+					TLOG(TLVL_DEBUG + 33) << "Found matching instance name " << contained_type->second << " for Contained Fragment type " << static_cast<int>(cf.fragment_type());
 					instance_name += contained_type->second;
+				}
+				else
+				{
+					auto systemTypes = artdaq::Fragment::MakeVerboseSystemTypeMap();
+					if (systemTypes.count(cf.fragment_type()))
+					{
+						TLOG(TLVL_DEBUG + 33) << "Matched contained fragment type " << static_cast<int>(cf.fragment_type()) << " to extended system type " << systemTypes.at(cf.fragment_type());
+						instance_name += systemTypes.at(cf.fragment_type());
+					}
 				}
 			}
 		}
