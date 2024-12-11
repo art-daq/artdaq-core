@@ -10,6 +10,8 @@
 #include "SharedMemoryTestShims.hh"
 #include "TRACE/tracemf.h"
 
+#include <thread>
+
 BOOST_AUTO_TEST_SUITE(SharedMemoryManager_test)
 
 BOOST_AUTO_TEST_CASE(Construct)
@@ -50,6 +52,7 @@ BOOST_AUTO_TEST_CASE(Attach)
 
 BOOST_AUTO_TEST_CASE(DataFlow)
 {
+	TRACE_CNTL("modeM", (uint64_t)1);
 	TLOG(TLVL_DEBUG) << "BEGIN TEST DataFlow";
 	uint32_t key = GetRandomKey(0x7357);
 	artdaq::SharedMemoryManager man(key, 10, 0x1000);
@@ -115,6 +118,7 @@ BOOST_AUTO_TEST_CASE(DataFlow)
 
 BOOST_AUTO_TEST_CASE(Exceptions)
 {
+	TRACE_CNTL("modeM", (uint64_t)1);
 	artdaq::configureMessageFacility("SharedMemoryManager_t", true, true);
 	TLOG(TLVL_DEBUG) << "BEGIN TEST Exceptions";
 	uint32_t key = GetRandomKey(0x7357);
@@ -168,6 +172,7 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 	BOOST_REQUIRE_EXCEPTION(man.MarkBufferEmpty(0), cet::exception, [&](cet::exception e) { return e.category() == "StateAccessViolation"; });
 	BOOST_REQUIRE_EQUAL(man.IsValid(), false);
 
+	TRACE_CNTL("modeM", (uint64_t)1);
 	man.Attach();
 
 	// Writing too much data is an exception
@@ -183,6 +188,7 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 	BOOST_REQUIRE_EXCEPTION(man.Write(buf, data, 0x2000), cet::exception, [&](cet::exception e) { return e.category() == "SharedMemoryWrite"; });
 	BOOST_REQUIRE_EQUAL(man.IsValid(), false);
 
+	TRACE_CNTL("modeM", (uint64_t)1);
 	man.Attach();
 	man2.Attach();
 	buf = man.GetBufferForWriting(false);
@@ -203,6 +209,7 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 	BOOST_REQUIRE_EXCEPTION(man2.Read(readbuf, data, 0x1001), cet::exception, [&](cet::exception e) { return e.category() == "SharedMemoryRead"; });
 	BOOST_REQUIRE_EQUAL(man2.IsValid(), false);
 
+	TRACE_CNTL("modeM", (uint64_t)1);
 	man.Attach();
 	man2.Attach();
 
@@ -236,6 +243,7 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 
 BOOST_AUTO_TEST_CASE(Broadcast)
 {
+	TRACE_CNTL("modeM", (uint64_t)1);
 	TLOG(TLVL_DEBUG) << "BEGIN TEST Broadcast";
 	uint32_t key = GetRandomKey(0x7357);
 	artdaq::SharedMemoryManager man(key, 10, 0x1000, 0x10000, false);
@@ -339,6 +347,103 @@ BOOST_AUTO_TEST_CASE(Broadcast)
 	sleep(1);
 	BOOST_REQUIRE_EQUAL(man.WriteReadyCount(false), 10);
 	TLOG(TLVL_DEBUG) << "END TEST Broadcast";
+}
+
+BOOST_AUTO_TEST_CASE(RoundRobin)
+{
+	TRACE_CNTL("modeM", (uint64_t)1);
+	TLOG(TLVL_DEBUG) << "BEGIN TEST RoundRobin";
+	uint32_t key = GetRandomKey(0x7357);
+	artdaq::SharedMemoryManager man(key, 1000, 0x1000);
+
+	uint8_t n = 0;
+	uint8_t data[0x1000];
+	std::generate_n(data, 0x1000, [&]() { return ++n; });
+
+    const int reader_count = 10;
+	const size_t n_writes = 1'000'000;
+
+	auto reader_proc = [key, reader_count]() {
+		size_t counter = 0;
+		size_t ooo_counter = 0;
+		size_t misses_after_start = 0;
+		size_t last_read_id = 0;
+		artdaq::SharedMemoryManager reader_man(key);
+		auto my_id = static_cast<size_t>(reader_man.GetMyId() - 1);
+
+        TLOG(TLVL_INFO) << "Reader " << my_id << " waiting for other readers..." << reader_man.GetReaderCount();
+        while (reader_man.GetReaderCount() < reader_count) {
+			reader_man.ReadyForRead();
+			std::this_thread::yield();
+        }
+
+		TLOG(TLVL_INFO) << "Reader " << my_id << " starting";
+		while (!reader_man.IsEndOfData())
+		{
+			if (reader_man.ReadyForRead())
+			{
+				auto buffer_id = reader_man.GetBufferForReading();
+				if (buffer_id == -1)
+				{
+					if (counter != 0) misses_after_start++;
+					std::this_thread::yield();
+					continue;
+				}
+				counter++;
+				reader_man.MarkBufferEmpty(buffer_id);
+				auto buffer_seq = reader_man.GetLastSeenBufferID();
+				if (last_read_id != 0 && buffer_seq != last_read_id + reader_man.GetReaderCount())
+				{
+					TLOG(TLVL_DEBUG) << "Reader " << my_id << " read " << counter << " has buffer_seq " << buffer_seq << " != last_read_id " << last_read_id << " + reader_count " << reader_man.GetReaderCount();
+					ooo_counter++;
+				}
+				last_read_id = buffer_seq;
+			}
+		}
+		TLOG(TLVL_INFO) << "Reader " << my_id << " read " << counter << " buffers, " << ooo_counter << " of them were out of round-robin order, and " << misses_after_start << " times there was no data available";
+	};
+
+    auto writer_proc = [&man, n_writes]() {
+		TLOG(TLVL_INFO) << "Writer Starting";
+		size_t write_counter = 0;
+		auto current_oom = 1;
+		auto start_time = std::chrono::steady_clock::now();
+		while (write_counter < n_writes) {
+			if (man.ReadyForWrite(false))
+			{
+                if (write_counter % current_oom == 0) {
+					TLOG(TLVL_INFO) << "Writing buffer " << write_counter;
+					if (write_counter >= static_cast<size_t>((10 * current_oom) - 1))
+					{
+						current_oom *= 10;
+                    }
+                }
+				int buf = man.GetBufferForWriting(false);
+				man.MarkBufferFull(buf);
+				write_counter++;
+			}
+		}
+		TLOG(TLVL_INFO) << "Write rate " << write_counter / artdaq::TimeUtils::GetElapsedTime(start_time) << " bufs/second";
+		TLOG(TLVL_INFO) << "Writer complete, sleeping for 1s, then detaching";
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		man.Detach();
+		TLOG(TLVL_INFO) << "Writer proc END";
+	};
+
+    TLOG(TLVL_INFO) << "Starting threads";
+    std::vector<std::jthread> threads;
+    for (int ii = 0; ii < reader_count; ++ii) {
+		threads.emplace_back(reader_proc);
+    }
+	threads.emplace_back(writer_proc);
+
+    TLOG(TLVL_INFO) << "Joining threads";
+    threads[threads.size() - 1].join();
+    for (auto& thread : threads) {
+		if(thread.joinable()) thread.join();
+    }
+
+	TLOG(TLVL_DEBUG) << "END TEST RoundRobin";
 }
 
 BOOST_AUTO_TEST_SUITE_END()
