@@ -114,10 +114,9 @@ public:
 
 	/**
 	 * \brief Get the list of all buffers currently owned by this manager instance.
-	 * \param locked Default = true, Whether to lock search_mutex_ before checking buffer ownership (skipped in Detach)
 	 * \return A std::deque<int> of buffer IDs currently owned by this manager instance.
 	 */
-	std::deque<int> GetBuffersOwnedByManager(bool locked = true);
+	std::deque<int> GetBuffersOwnedByManager();
 
 	/**
 	 * \brief Get the current size of the buffer's data
@@ -328,16 +327,16 @@ public:
 	 */
 	size_t GetBufferCount() const { return IsValid() ? shm_ptr_->next_sequence_id : 0; }
 
+    /**
+     * \brief Get the number of reader instances connected to the Shared Memory
+     * \return The number of attached readers, as reported by the readers
+     */
+    int GetReaderCount() { return IsValid() ? shm_ptr_->reader_count.load() : 0; }
 	/**
 	 * \brief Gets the highest buffer number either written or read by this SharedMemoryManager
 	 * \return The highest buffer id written or read by this SharedMemoryManager
 	 */
 	size_t GetLastSeenBufferID() const { return last_seen_id_; }
-
-	/**
-	 * \brief Gets the lowest sequence ID that has been read by any reader, as reported by the readers.
-	 */
-	size_t GetLowestSeqIDRead() const { return IsValid() ? shm_ptr_->lowest_seq_id_read : 0; }
 
 	/**
 	 * \brief Sets the threshold after which a buffer should be considered "non-empty" (in case of default headers)
@@ -399,12 +398,22 @@ private:
 	SharedMemoryManager& operator=(SharedMemoryManager const&) = delete;
 	SharedMemoryManager& operator=(SharedMemoryManager&&) = delete;
 
+    struct ShmBufferSem
+    {
+		BufferSemaphoreFlags flags;
+		int id;
+
+        ShmBufferSem()
+		    : flags(BufferSemaphoreFlags::Empty), id(-1){}
+        ShmBufferSem(BufferSemaphoreFlags f, int i)
+		    : flags(f), id(i) {}
+    };
+
 	struct ShmBuffer
 	{
 		size_t writePos;
 		size_t readPos;
-		std::atomic<BufferSemaphoreFlags> sem;
-		std::atomic<int16_t> sem_id;
+		std::atomic<ShmBufferSem> semaphore;
 		std::atomic<size_t> sequence_id;
 		std::atomic<uint64_t> last_touch_time;
 	};
@@ -417,7 +426,6 @@ private:
 		size_t buffer_size;
 		size_t buffer_timeout_us;
 		size_t next_sequence_id;
-		size_t lowest_seq_id_read;
 		bool destructive_read_mode;
 
 		std::atomic<int> writer_count;
@@ -459,8 +467,6 @@ private:
 	uint32_t shm_key_;
 	int manager_id_;
 	std::vector<ShmBuffer*> buffer_ptrs_;
-	mutable std::vector<std::mutex> buffer_mutexes_;
-	mutable std::mutex search_mutex_;
 
 	std::atomic<size_t> last_seen_id_;
 	bool registered_reader_{false};

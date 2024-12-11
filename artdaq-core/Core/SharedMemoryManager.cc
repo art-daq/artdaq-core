@@ -10,7 +10,6 @@
 #include <csignal>
 #include "TRACE/tracemf.h"
 #include "artdaq-core/Core/SharedMemoryManager.hh"
-#include "artdaq-core/Utilities/TraceLock.hh"
 #include "cetlib_except/exception.h"
 
 #define TLVL_DETACH 34
@@ -247,8 +246,7 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 					}
 					getBufferInfo_(ii)->writePos = 0;
 					getBufferInfo_(ii)->readPos = 0;
-					getBufferInfo_(ii)->sem = BufferSemaphoreFlags::Empty;
-					getBufferInfo_(ii)->sem_id = -1;
+					getBufferInfo_(ii)->semaphore = ShmBufferSem(BufferSemaphoreFlags::Empty, -1);
 					getBufferInfo_(ii)->last_touch_time = TimeUtils::gettimeofday_us();
 				}
 
@@ -260,7 +258,6 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 				while (shm_ptr_->ready_magic != 0xCAFE1111) { usleep(1000); }
 				TLOG(TLVL_ATTACH) << "Getting ID from Shared Memory";
 				GetNewId();
-				shm_ptr_->lowest_seq_id_read = 0;
 				TLOG(TLVL_ATTACH) << "Getting Shared Memory Size parameters";
 
 				requested_shm_parameters_.buffer_count = shm_ptr_->buffer_count;
@@ -272,7 +269,6 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 			}
 
 			// last_seen_id_ = shm_ptr_->next_sequence_id;
-			buffer_mutexes_ = std::vector<std::mutex>(shm_ptr_->buffer_count);
 
 			TLOG(TLVL_ATTACH) << "Initialization Complete: "
 			                  << "key: " << std::hex << std::showbase << shm_key_
@@ -305,120 +301,72 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 		registered_reader_ = true;
 	}
 
-	std::lock_guard<std::mutex> lk(search_mutex_);
-	// TraceLock lk(search_mutex_, 11, "GetBufferForReadingSearch");
-	auto rp = shm_ptr_->reader_pos.load();
-
-	TLOG(TLVL_GETBUFFER) << "GetBufferForReading lock acquired, scanning " << shm_ptr_->buffer_count << " buffers";
+	TLOG(TLVL_GETBUFFER) << "Scanning " << shm_ptr_->buffer_count << " buffers";
 
 	for (int retry = 0; retry < 5; retry++)
 	{
-		BufferSemaphoreFlags sem;
-		int16_t sem_id = -2;
+		ShmBufferSem semaphore;
 		int buffer_num = -1;
 		ShmBuffer* buffer_ptr = nullptr;
-		uint64_t seqID = -1;
+		auto rp = shm_ptr_->reader_pos.load();
+		auto reader_count = shm_ptr_->reader_count.load();
 
 		for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 		{
-			auto buffer = (ii + rp) % shm_ptr_->buffer_count;
+			buffer_num = (ii + rp) % shm_ptr_->buffer_count;
 
-			TLOG(TLVL_GETBUFFER + 1) << "GetBufferForReading Checking if buffer " << buffer << " is stale. Shm destructive_read_mode=" << shm_ptr_->destructive_read_mode;
-			ResetBuffer(buffer);
+			//TLOG(TLVL_GETBUFFER + 1) << "Checking if buffer " << buffer_num << " is stale. Shm destructive_read_mode=" << shm_ptr_->destructive_read_mode;
+			ResetBuffer(buffer_num);
 
-			auto buf = getBufferInfo_(buffer);
+			auto buf = getBufferInfo_(buffer_num);
 			if (buf == nullptr)
 			{
 				continue;
 			}
 
-			sem = buf->sem.load();
-			sem_id = buf->sem_id.load();
+			semaphore = buf->semaphore.load();
+			auto sequence_id = buf->sequence_id.load();
 
-			TLOG(TLVL_GETBUFFER + 1) << "GetBufferForReading: Buffer " << buffer << ": sem=" << FlagToString(sem)
-			                         << " (expected " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << sem_id << ", seq_id=" << buf->sequence_id << " )";
-			if (sem == BufferSemaphoreFlags::Full && (sem_id == -1 || sem_id == manager_id_) && (shm_ptr_->destructive_read_mode || buf->sequence_id > last_seen_id_))
+			if (semaphore.flags == BufferSemaphoreFlags::Full && (semaphore.id == -1 || semaphore.id == manager_id_) && (shm_ptr_->destructive_read_mode || sequence_id > last_seen_id_))
 			{
-				if (buf->sequence_id < seqID)
+				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
+				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_;
+                // Claim the buffer if it is in my sequence, I haven't claimed buffers before, or if we are in Broadcast mode
+				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + reader_count < last_seen_id_)
 				{
 					buffer_ptr = buf;
-					seqID = buf->sequence_id;
-					buffer_num = buffer;
-					touchBuffer_(buf);
-					if (seqID == last_seen_id_ + shm_ptr_->reader_count)
+					ShmBufferSem claim(BufferSemaphoreFlags::Reading, manager_id_);
+					if (!buffer_ptr->semaphore.compare_exchange_strong(semaphore, claim))
 					{
-						break;
+						continue;
 					}
-				}
+					if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
+					{
+						TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was changing sem)";
+						continue;
+					}
+					buffer_ptr->readPos = 0;
+					touchBuffer_(buffer_ptr);
+					if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
+					{
+						TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was touching buffer SHOULD NOT HAPPEN!)";
+						continue;
+					}
+					last_seen_id_ = sequence_id;
+
+					TLOG(TLVL_GETBUFFER) << "Returning " << buffer_num;
+					return buffer_num;
+                }
 			}
 		}
 
-		if (buffer_ptr != nullptr)
-		{
-			sem = buffer_ptr->sem.load();
-			sem_id = buffer_ptr->sem_id.load();
-			seqID = buffer_ptr->sequence_id.load();
-		}
-
-		TLOG(TLVL_GETBUFFER + 2) << "GetBufferForReading: Mode: " << std::boolalpha << shm_ptr_->destructive_read_mode << ", seqID: " << seqID << ", last_seen_id_: " << last_seen_id_ << ", reader_count: " << shm_ptr_->reader_count;
-
-		if (shm_ptr_->destructive_read_mode && last_seen_id_ > 0    // Round-robin enabled
-		    && shm_ptr_->reader_count > 1                           // Don't skip buffers if there is only one reader
-		    && seqID != last_seen_id_ + shm_ptr_->reader_count      // SeqID is not "next" SeqID
-		    && seqID > last_seen_id_ - shm_ptr_->reader_count       // SeqID is not "left behind" (from at least previous RR)
-		    && seqID < last_seen_id_ + 2 * shm_ptr_->reader_count)  // Reader is not "left behind" (SeqID from next RR)
-		{
-			TLOG(TLVL_GETBUFFER + 2) << "GetBufferForReading: Skipping due to seqID check";
-			continue;
-		}
-		TLOG(TLVL_GETBUFFER + 2) << "GetBufferForReading: After seqID check";
-
-		if ((buffer_ptr == nullptr) || (sem_id != -1 && sem_id != manager_id_) || sem != BufferSemaphoreFlags::Full)
+        if (buffer_ptr == nullptr)
 		{
 			continue;
 		}
-
-		if (buffer_num >= 0)
-		{
-			TLOG(TLVL_GETBUFFER) << "GetBufferForReading Found buffer " << buffer_num;
-			touchBuffer_(buffer_ptr);
-			if (!buffer_ptr->sem_id.compare_exchange_strong(sem_id, manager_id_))
-			{
-				continue;
-			}
-			if (!buffer_ptr->sem.compare_exchange_strong(sem, BufferSemaphoreFlags::Reading))
-			{
-				continue;
-			}
-			if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
-			{
-				TLOG(TLVL_GETBUFFER) << "GetBufferForReading: Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was changing sem)";
-				continue;
-			}
-			buffer_ptr->readPos = 0;
-			touchBuffer_(buffer_ptr);
-			if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
-			{
-				TLOG(TLVL_GETBUFFER) << "GetBufferForReading: Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was touching buffer SHOULD NOT HAPPEN!)";
-				continue;
-			}
-			if (shm_ptr_->destructive_read_mode && shm_ptr_->lowest_seq_id_read == last_seen_id_)
-			{
-				shm_ptr_->lowest_seq_id_read = seqID;
-			}
-			last_seen_id_ = seqID;
-			if (shm_ptr_->destructive_read_mode)
-			{
-				shm_ptr_->reader_pos = (buffer_num + 1) % shm_ptr_->buffer_count;
-			}
-
-			TLOG(TLVL_GETBUFFER) << "GetBufferForReading returning " << buffer_num;
-			return buffer_num;
-		}
-		retry = 5;
 	}
 
-	TLOG(TLVL_GETBUFFER) << "GetBufferForReading returning -1 because no buffers are ready";
+	TLOG(TLVL_GETBUFFER) << "Returning -1 because no buffers are ready";
 	return -1;
 }
 
@@ -432,11 +380,9 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 		registered_writer_ = true;
 	}
 
-	std::lock_guard<std::mutex> lk(search_mutex_);
-	// TraceLock lk(search_mutex_, 12, "GetBufferForWritingSearch");
 	auto wp = shm_ptr_->writer_pos.load();
 
-	TLOG(TLVL_GETBUFFER) << "GetBufferForWriting lock acquired, scanning " << shm_ptr_->buffer_count << " buffers";
+	TLOG(TLVL_GETBUFFER) << "GetBufferForWriting scanning " << shm_ptr_->buffer_count << " buffers";
 
 	// First, only look for "Empty" buffers
 	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
@@ -451,17 +397,13 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 			continue;
 		}
 
-		auto sem = buf->sem.load();
-		auto sem_id = buf->sem_id.load();
+		auto semaphore = buf->semaphore.load();
 
-		if (sem == BufferSemaphoreFlags::Empty && sem_id == -1)
+		if (semaphore.flags == BufferSemaphoreFlags::Empty && semaphore.id == -1)
 		{
 			touchBuffer_(buf);
-			if (!buf->sem_id.compare_exchange_strong(sem_id, manager_id_))
-			{
-				continue;
-			}
-			if (!buf->sem.compare_exchange_strong(sem, BufferSemaphoreFlags::Writing))
+			ShmBufferSem claim(BufferSemaphoreFlags::Writing, manager_id_);
+			if (!buf->semaphore.compare_exchange_strong(semaphore, claim))
 			{
 				continue;
 			}
@@ -497,17 +439,13 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 				continue;
 			}
 
-			auto sem = buf->sem.load();
-			auto sem_id = buf->sem_id.load();
+			auto semaphore = buf->semaphore.load();
 
-			if (sem == BufferSemaphoreFlags::Full && sem_id == -1)
+			if (semaphore.flags == BufferSemaphoreFlags::Full && semaphore.id == -1)
 			{
 				touchBuffer_(buf);
-				if (!buf->sem_id.compare_exchange_strong(sem_id, manager_id_))
-				{
-					continue;
-				}
-				if (!buf->sem.compare_exchange_strong(sem, BufferSemaphoreFlags::Writing))
+				ShmBufferSem claim(BufferSemaphoreFlags::Writing, manager_id_);
+				if (!buf->semaphore.compare_exchange_strong(semaphore, claim))
 				{
 					continue;
 				}
@@ -541,17 +479,13 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 				continue;
 			}
 
-			auto sem = buf->sem.load();
-			auto sem_id = buf->sem_id.load();
+			auto semaphore = buf->semaphore.load();
 
-			if (sem == BufferSemaphoreFlags::Reading)
+			if (semaphore.flags == BufferSemaphoreFlags::Reading)
 			{
 				touchBuffer_(buf);
-				if (!buf->sem_id.compare_exchange_strong(sem_id, manager_id_))
-				{
-					continue;
-				}
-				if (!buf->sem.compare_exchange_strong(sem, BufferSemaphoreFlags::Writing))
+				ShmBufferSem claim(BufferSemaphoreFlags::Writing, manager_id_);
+				if (!buf->semaphore.compare_exchange_strong(semaphore, claim))
 				{
 					continue;
 				}
@@ -582,10 +516,15 @@ size_t artdaq::SharedMemoryManager::ReadReadyCount()
 	{
 		return 0;
 	}
+
+	if (!registered_reader_)
+	{
+		shm_ptr_->reader_count++;
+		registered_reader_ = true;
+	}
+
 	TLOG(TLVL_READREADY) << std::hex << std::showbase << shm_key_ << " ReadReadyCount BEGIN" << std::dec;
-	std::unique_lock<std::mutex> lk(search_mutex_);
-	TLOG(TLVL_READREADY) << "ReadReadyCount lock acquired, scanning " << shm_ptr_->buffer_count << " buffers";
-	// TraceLock lk(search_mutex_, 14, "ReadReadyCountSearch");
+	TLOG(TLVL_READREADY) << "ReadReadyCount scanning " << shm_ptr_->buffer_count << " buffers";
 	size_t count = 0;
 	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
@@ -599,10 +538,12 @@ size_t artdaq::SharedMemoryManager::ReadReadyCount()
 			continue;
 		}
 
+		auto semaphore = buf->semaphore.load();
 #ifndef __OPTIMIZE__
-		TLOG(TLVL_READREADY + 2) << std::hex << std::showbase << shm_key_ << std::dec << " ReadReadyCount: Buffer " << ii << ": sem=" << FlagToString(buf->sem) << " (expected " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << buf->sem_id << " )";
+		TLOG(TLVL_READREADY + 2) << std::hex << std::showbase << shm_key_ << std::dec << " ReadReadyCount: Buffer " << ii << ": sem=" << FlagToString(semaphore.flags)
+		                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << " )";
 #endif
-		if (buf->sem == BufferSemaphoreFlags::Full && (buf->sem_id == -1 || buf->sem_id == manager_id_) && (shm_ptr_->destructive_read_mode || buf->sequence_id > last_seen_id_))
+		if (semaphore.flags == BufferSemaphoreFlags::Full && (semaphore.id == -1 || semaphore.id == manager_id_) && (shm_ptr_->destructive_read_mode || buf->sequence_id > last_seen_id_))
 		{
 #ifndef __OPTIMIZE__
 			TLOG(TLVL_READREADY + 3) << std::hex << std::showbase << shm_key_ << std::dec << " ReadReadyCount: Buffer " << ii << " is either unowned or owned by this manager, and is marked full.";
@@ -621,9 +562,7 @@ size_t artdaq::SharedMemoryManager::WriteReadyCount(bool overwrite)
 		return 0;
 	}
 	TLOG(TLVL_WRITEREADY) << std::hex << std::showbase << shm_key_ << " WriteReadyCount BEGIN" << std::dec;
-	std::unique_lock<std::mutex> lk(search_mutex_);
-	// TraceLock lk(search_mutex_, 15, "WriteReadyCountSearch");
-	TLOG(TLVL_WRITEREADY) << "WriteReadyCount(" << overwrite << ") lock acquired, scanning " << shm_ptr_->buffer_count << " buffers";
+	TLOG(TLVL_WRITEREADY) << "WriteReadyCount(" << overwrite << ") scanning " << shm_ptr_->buffer_count << " buffers";
 	size_t count = 0;
 	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
@@ -637,7 +576,8 @@ size_t artdaq::SharedMemoryManager::WriteReadyCount(bool overwrite)
 		{
 			continue;
 		}
-		if ((buf->sem == BufferSemaphoreFlags::Empty && buf->sem_id == -1) || (overwrite && buf->sem != BufferSemaphoreFlags::Writing))
+		auto semaphore = buf->semaphore.load();
+		if ((semaphore.flags == BufferSemaphoreFlags::Empty && semaphore.id == -1) || (overwrite && semaphore.flags != BufferSemaphoreFlags::Writing))
 		{
 #ifndef __OPTIMIZE__
 			TLOG(TLVL_WRITEREADY + 1) << std::hex << std::showbase << shm_key_ << std::dec << " WriteReadyCount: Buffer " << ii << " is either empty or is available for overwrite.";
@@ -654,13 +594,18 @@ bool artdaq::SharedMemoryManager::ReadyForRead()
 	{
 		return false;
 	}
+
+	if (!registered_reader_)
+	{
+		shm_ptr_->reader_count++;
+		registered_reader_ = true;
+	}
+
 	TLOG(TLVL_READREADY) << std::hex << std::showbase << shm_key_ << " ReadyForRead BEGIN" << std::dec;
-	std::unique_lock<std::mutex> lk(search_mutex_);
-	// TraceLock lk(search_mutex_, 14, "ReadyForReadSearch");
 
 	auto rp = shm_ptr_->reader_pos.load();
 
-	TLOG(TLVL_READREADY) << "ReadyForRead lock acquired, scanning " << shm_ptr_->buffer_count << " buffers";
+	TLOG(TLVL_READREADY) << "ReadyForRead scanning " << shm_ptr_->buffer_count << " buffers";
 
 	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
@@ -676,12 +621,14 @@ bool artdaq::SharedMemoryManager::ReadyForRead()
 			continue;
 		}
 
+		auto semaphore = buf->semaphore.load();
 #ifndef __OPTIMIZE__
-		TLOG(TLVL_READREADY + 2) << std::hex << std::showbase << shm_key_ << std::dec << " ReadyForRead: Buffer " << buffer << ": sem=" << FlagToString(buf->sem) << " (expected " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << buf->sem_id << " )"
+		TLOG(TLVL_READREADY + 2) << std::hex << std::showbase << shm_key_ << std::dec << " ReadyForRead: Buffer " << buffer << ": sem=" << FlagToString(semaphore.flags) << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id="
+		                         << semaphore.id << " )"
 		                         << " seq_id=" << buf->sequence_id << " >? " << last_seen_id_;
 #endif
 
-		if (buf->sem == BufferSemaphoreFlags::Full && (buf->sem_id == -1 || buf->sem_id == manager_id_) && (shm_ptr_->destructive_read_mode || buf->sequence_id > last_seen_id_))
+		if (semaphore.flags == BufferSemaphoreFlags::Full && (semaphore.id == -1 || semaphore.id == manager_id_) && (shm_ptr_->destructive_read_mode || buf->sequence_id > last_seen_id_))
 		{
 			TLOG(TLVL_READREADY + 3) << std::hex << std::showbase << shm_key_ << std::dec << " ReadyForRead: Buffer " << buffer << " is either unowned or owned by this manager, and is marked full.";
 			touchBuffer_(buf);
@@ -699,12 +646,9 @@ bool artdaq::SharedMemoryManager::ReadyForWrite(bool overwrite)
 	}
 	TLOG(TLVL_WRITEREADY) << std::hex << std::showbase << shm_key_ << " ReadyForWrite BEGIN" << std::dec;
 
-	std::lock_guard<std::mutex> lk(search_mutex_);
-	// TraceLock lk(search_mutex_, 15, "ReadyForWriteSearch");
-
 	auto wp = shm_ptr_->writer_pos.load();
 
-	TLOG(TLVL_WRITEREADY) << "ReadyForWrite lock acquired, scanning " << shm_ptr_->buffer_count << " buffers";
+	TLOG(TLVL_WRITEREADY) << "ReadyForWrite scanning " << shm_ptr_->buffer_count << " buffers";
 
 	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
@@ -716,7 +660,8 @@ bool artdaq::SharedMemoryManager::ReadyForWrite(bool overwrite)
 		{
 			continue;
 		}
-		if ((buf->sem == BufferSemaphoreFlags::Empty && buf->sem_id == -1) || (overwrite && buf->sem != BufferSemaphoreFlags::Writing))
+		auto semaphore = buf->semaphore.load();
+		if ((semaphore.flags == BufferSemaphoreFlags::Empty && semaphore.id == -1) || (overwrite && semaphore.flags != BufferSemaphoreFlags::Writing))
 		{
 			TLOG(TLVL_WRITEREADY + 1) << std::hex << std::showbase << shm_key_
 			                          << std::dec
@@ -727,7 +672,7 @@ bool artdaq::SharedMemoryManager::ReadyForWrite(bool overwrite)
 	return false;
 }
 
-std::deque<int> artdaq::SharedMemoryManager::GetBuffersOwnedByManager(bool locked)
+std::deque<int> artdaq::SharedMemoryManager::GetBuffersOwnedByManager()
 {
 	std::deque<int> output;
 	size_t buffer_count = size();
@@ -735,13 +680,7 @@ std::deque<int> artdaq::SharedMemoryManager::GetBuffersOwnedByManager(bool locke
 	{
 		return output;
 	}
-	TLOG(TLVL_BUFFER) << "GetBuffersOwnedByManager BEGIN. Locked? " << locked;
-	if (locked)
-	{
-		TLOG(TLVL_BUFLCK) << "GetBuffersOwnedByManager obtaining search_mutex";
-		std::lock_guard<std::mutex> lk(search_mutex_);
-		TLOG(TLVL_BUFLCK) << "GetBuffersOwnedByManager obtained search_mutex";
-		// TraceLock lk(search_mutex_, 16, "GetOwnedSearch");
+	TLOG(TLVL_BUFFER) << "GetBuffersOwnedByManager BEGIN";
 		for (size_t ii = 0; ii < buffer_count; ++ii)
 		{
 			auto buf = getBufferInfo_(ii);
@@ -749,27 +688,11 @@ std::deque<int> artdaq::SharedMemoryManager::GetBuffersOwnedByManager(bool locke
 			{
 				continue;
 			}
-			if (buf->sem_id == manager_id_)
+			if (buf->semaphore.load().id == manager_id_)
 			{
 				output.push_back(ii);
 			}
 		}
-	}
-	else
-	{
-		for (size_t ii = 0; ii < buffer_count; ++ii)
-		{
-			auto buf = getBufferInfo_(ii);
-			if (buf == nullptr)
-			{
-				continue;
-			}
-			if (buf->sem_id == manager_id_)
-			{
-				output.push_back(ii);
-			}
-		}
-	}
 
 	TLOG(TLVL_BUFFER) << "GetBuffersOwnedByManager: own " << output.size() << " / " << buffer_count << " buffers.";
 	return output;
@@ -783,11 +706,6 @@ size_t artdaq::SharedMemoryManager::BufferDataSize(int buffer)
 	{
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
-
-	TLOG(TLVL_BUFLCK) << "BufferDataSize obtaining buffer_mutex for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	TLOG(TLVL_BUFLCK) << "BufferDataSize obtained buffer_mutex for buffer " << buffer;
-	// TraceLock lk(buffer_mutexes_[buffer], 17, "DataSizeBuffer" + std::to_string(buffer));
 
 	auto buf = getBufferInfo_(buffer);
 	if (buf == nullptr)
@@ -809,13 +727,8 @@ void artdaq::SharedMemoryManager::ResetReadPos(int buffer)
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
 
-	TLOG(TLVL_BUFLCK) << "ResetReadPos obtaining buffer_mutex for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	TLOG(TLVL_BUFLCK) << "ResetReadPos obtained buffer_mutex for buffer " << buffer;
-
-	// TraceLock lk(buffer_mutexes_[buffer], 18, "ResetReadPosBuffer" + std::to_string(buffer));
 	auto buf = getBufferInfo_(buffer);
-	if ((buf == nullptr) || buf->sem_id != manager_id_)
+	if ((buf == nullptr) || buf->semaphore.load().id != manager_id_)
 	{
 		return;
 	}
@@ -834,11 +747,6 @@ void artdaq::SharedMemoryManager::ResetWritePos(int buffer)
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
 
-	TLOG(TLVL_BUFLCK) << "ResetWritePos obtaining buffer_mutex for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	TLOG(TLVL_BUFLCK) << "ResetWritePos obtained buffer_mutex for buffer " << buffer;
-
-	// TraceLock lk(buffer_mutexes_[buffer], 18, "ResetWritePosBuffer" + std::to_string(buffer));
 	auto buf = getBufferInfo_(buffer);
 	if (buf == nullptr)
 	{
@@ -860,12 +768,8 @@ void artdaq::SharedMemoryManager::IncrementReadPos(int buffer, size_t read)
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
 
-	TLOG(TLVL_BUFLCK) << "IncrementReadPos obtaining buffer_mutex for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	TLOG(TLVL_BUFLCK) << "IncrementReadPos obtained buffer_mutex for buffer " << buffer;
-	// TraceLock lk(buffer_mutexes_[buffer], 19, "IncReadPosBuffer" + std::to_string(buffer));
 	auto buf = getBufferInfo_(buffer);
-	if ((buf == nullptr) || buf->sem_id != manager_id_)
+	if ((buf == nullptr) || buf->semaphore.load().id != manager_id_)
 	{
 		return;
 	}
@@ -888,10 +792,6 @@ bool artdaq::SharedMemoryManager::IncrementWritePos(int buffer, size_t written)
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
 
-	TLOG(TLVL_BUFLCK) << "IncrementWritePos obtaining buffer_mutex for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	TLOG(TLVL_BUFLCK) << "IncrementWritePos obtained buffer_mutex for buffer " << buffer;
-	// TraceLock lk(buffer_mutexes_[buffer], 20, "IncWritePosBuffer" + std::to_string(buffer));
 	auto buf = getBufferInfo_(buffer);
 	if (buf == nullptr)
 	{
@@ -924,10 +824,6 @@ bool artdaq::SharedMemoryManager::MoreDataInBuffer(int buffer)
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
 
-	TLOG(TLVL_BUFLCK) << "MoreDataInBuffer obtaining buffer_mutex for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	TLOG(TLVL_BUFLCK) << "MoreDataInBuffer obtained buffer_mutex for buffer " << buffer;
-	// TraceLock lk(buffer_mutexes_[buffer], 21, "MoreDataInBuffer" + std::to_string(buffer));
 	auto buf = getBufferInfo_(buffer);
 	if (buf == nullptr)
 	{
@@ -944,10 +840,6 @@ bool artdaq::SharedMemoryManager::CheckBuffer(int buffer, BufferSemaphoreFlags f
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
 
-	TLOG(TLVL_BUFLCK) << "CheckBuffer obtaining buffer_mutex for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	TLOG(TLVL_BUFLCK) << "CheckBuffer obtained buffer_mutex for buffer " << buffer;
-	// TraceLock lk(buffer_mutexes_[buffer], 22, "CheckBuffer" + std::to_string(buffer));
 	return checkBuffer_(getBufferInfo_(buffer), flags, false);
 }
 
@@ -958,25 +850,21 @@ void artdaq::SharedMemoryManager::MarkBufferFull(int buffer, int destination)
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
 
-	TLOG(TLVL_BUFLCK) << "MarkBufferFull obtaining buffer_mutex for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	TLOG(TLVL_BUFLCK) << "MarkBufferFull obtained buffer_mutex for buffer " << buffer;
-
-	// TraceLock lk(buffer_mutexes_[buffer], 23, "FillBuffer" + std::to_string(buffer));
 	auto shmBuf = getBufferInfo_(buffer);
 	if (shmBuf == nullptr)
 	{
 		return;
 	}
 	touchBuffer_(shmBuf);
-	if (shmBuf->sem_id == manager_id_)
+	auto semaphore = shmBuf->semaphore.load();
+	auto release = ShmBufferSem(BufferSemaphoreFlags::Full, destination);
+	if (semaphore.id == manager_id_)
 	{
-		if (shmBuf->sem != BufferSemaphoreFlags::Full)
+		auto check = shmBuf->semaphore.compare_exchange_strong(semaphore, release);
+		if (!check)
 		{
-			shmBuf->sem = BufferSemaphoreFlags::Full;
+			Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
 		}
-
-		shmBuf->sem_id = destination;
 	}
 }
 
@@ -987,8 +875,6 @@ void artdaq::SharedMemoryManager::MarkBufferEmpty(int buffer, bool force, bool d
 	{
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	// TraceLock lk(buffer_mutexes_[buffer], 24, "EmptyBuffer" + std::to_string(buffer));
 	auto shmBuf = getBufferInfo_(buffer);
 	if (shmBuf == nullptr)
 	{
@@ -1002,22 +888,29 @@ void artdaq::SharedMemoryManager::MarkBufferEmpty(int buffer, bool force, bool d
 	touchBuffer_(shmBuf);
 
 	shmBuf->readPos = 0;
+	auto semaphore = shmBuf->semaphore.load();
+	ShmBufferSem release(BufferSemaphoreFlags::Reading, -1);
 
-	if ((force && (manager_id_ == 0 || manager_id_ == shmBuf->sem_id)) || (!force && shm_ptr_->destructive_read_mode))
+	if ((force && (manager_id_ == 0 || manager_id_ == semaphore.id)) || (!force && shm_ptr_->destructive_read_mode))
 	{
 		TLOG(TLVL_POS + 3) << "MarkBufferEmpty Resetting buffer " << buffer << " (SeqID " << shmBuf->sequence_id << ") to Empty state";
 		shmBuf->writePos = 0;
-		shmBuf->sem = BufferSemaphoreFlags::Empty;
-		if (shm_ptr_->reader_pos == static_cast<unsigned>(buffer) && !shm_ptr_->destructive_read_mode)
+		release.flags = BufferSemaphoreFlags::Empty;
+		if (shm_ptr_->reader_pos == static_cast<unsigned>(buffer))
 		{
-			TLOG(TLVL_POS + 3) << "MarkBufferEmpty Broadcast mode; incrementing reader_pos from " << shm_ptr_->reader_pos << " to " << (buffer + 1) % shm_ptr_->buffer_count;
+			TLOG(TLVL_POS + 3) << "Incrementing reader_pos from " << shm_ptr_->reader_pos << " to " << (buffer + 1) % shm_ptr_->buffer_count;
 			shm_ptr_->reader_pos = (buffer + 1) % shm_ptr_->buffer_count;
 		}
 	}
-	else {
-		shmBuf->sem = BufferSemaphoreFlags::Full;
+	else
+	{
+		release.flags = BufferSemaphoreFlags::Full;
 	}
-	shmBuf->sem_id = -1;
+	auto check = shmBuf->semaphore.compare_exchange_strong(semaphore, release);
+	if (!check)
+	{
+		Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
+	}
 	TLOG(TLVL_POS + 3) << "MarkBufferEmpty END, buffer=" << buffer << ", force=" << force;
 }
 
@@ -1028,26 +921,11 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
 
-	// ELF, 3/19/2019: These TRACE calls are a major performance hit with many buffers.
-	// TLOG(TLVL_BUFLCK) << "ResetBuffer: obtaining buffer_mutex lock for buffer " << buffer;
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	// TLOG(TLVL_BUFLCK) << "ResetBuffer: obtained buffer_mutex lock for buffer " << buffer;
-
-	// TraceLock lk(buffer_mutexes_[buffer], 25, "ResetBuffer" + std::to_string(buffer));
 	auto shmBuf = getBufferInfo_(buffer);
 	if (shmBuf == nullptr)
 	{
 		return false;
 	}
-	/*
-	    if (shmBuf->sequence_id < shm_ptr_->lowest_seq_id_read - size() && shmBuf->sem == BufferSemaphoreFlags::Full)
-	    {
-	        TLOG(TLVL_RESET) << "Buffer " << buffer << " has been passed by all readers, marking Empty" ;
-	        shmBuf->writePos = 0;
-	        shmBuf->sem = BufferSemaphoreFlags::Empty;
-	        shmBuf->sem_id = -1;
-	        return true;
-	    }*/
 
 	size_t delta = TimeUtils::gettimeofday_us() - shmBuf->last_touch_time;
 	if (delta > 0xFFFFFFFF)
@@ -1056,23 +934,28 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		shmBuf->last_touch_time = TimeUtils::gettimeofday_us();
 		return false;
 	}
-	if (shm_ptr_->buffer_timeout_us == 0 || delta <= shm_ptr_->buffer_timeout_us || shmBuf->sem == BufferSemaphoreFlags::Empty)
+	if (shm_ptr_->buffer_timeout_us == 0 || delta <= shm_ptr_->buffer_timeout_us || shmBuf->semaphore.load().flags == BufferSemaphoreFlags::Empty)
 	{
 		return false;
 	}
 	TLOG(TLVL_RESET) << "Buffer " << buffer << " at " << static_cast<void*>(shmBuf) << " is stale, time=" << TimeUtils::gettimeofday_us() << ", last touch=" << shmBuf->last_touch_time << ", d=" << delta << ", timeout=" << shm_ptr_->buffer_timeout_us;
 
-	if (shmBuf->sem_id == manager_id_ && shmBuf->sem == BufferSemaphoreFlags::Writing)
+	auto semaphore = shmBuf->semaphore.load();
+	if (semaphore.id == manager_id_ && semaphore.flags == BufferSemaphoreFlags::Writing)
 	{
 		return true;
 	}
 
-	if (!shm_ptr_->destructive_read_mode && shmBuf->sem == BufferSemaphoreFlags::Full && manager_id_ == 0)
+	if (!shm_ptr_->destructive_read_mode && semaphore.flags == BufferSemaphoreFlags::Full && manager_id_ == 0)
 	{
 		TLOG(TLVL_RESET) << "Resetting old broadcast mode buffer " << buffer << " (seqid=" << shmBuf->sequence_id << "). State: Full-->Empty";
 		shmBuf->writePos = 0;
-		shmBuf->sem = BufferSemaphoreFlags::Empty;
-		shmBuf->sem_id = -1;
+		ShmBufferSem release(BufferSemaphoreFlags::Empty, -1);
+		auto check = shmBuf->semaphore.compare_exchange_strong(semaphore, release);
+		if (!check)
+		{
+			Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
+		}
 		if (shm_ptr_->reader_pos == static_cast<unsigned>(buffer))
 		{
 			shm_ptr_->reader_pos = (buffer + 1) % shm_ptr_->buffer_count;
@@ -1080,7 +963,7 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		return true;
 	}
 
-	if (shmBuf->sem_id != manager_id_ && shmBuf->sem == BufferSemaphoreFlags::Reading)
+	if (semaphore.id != manager_id_ && semaphore.flags == BufferSemaphoreFlags::Reading)
 	{
 		// Ron wants to re-check for potential interleave of buffer state updates
 		size_t delta = TimeUtils::gettimeofday_us() - shmBuf->last_touch_time;
@@ -1092,8 +975,12 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		                   << " ( " << delta << " / " << shm_ptr_->buffer_timeout_us << " us ) detected! (seqid="
 		                   << shmBuf->sequence_id << ") Resetting... Reading-->Full";
 		shmBuf->readPos = 0;
-		shmBuf->sem = BufferSemaphoreFlags::Full;
-		shmBuf->sem_id = -1;
+		ShmBufferSem release(BufferSemaphoreFlags::Full, -1);
+		auto check = shmBuf->semaphore.compare_exchange_strong(semaphore, release);
+		if (!check)
+		{
+			Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
+		}
 		return true;
 	}
 	return false;
@@ -1148,8 +1035,6 @@ size_t artdaq::SharedMemoryManager::Write(int buffer, void* data, size_t size)
 	{
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	// TraceLock lk(buffer_mutexes_[buffer], 26, "WriteBuffer" + std::to_string(buffer));
 	auto shmBuf = getBufferInfo_(buffer);
 	if (shmBuf == nullptr)
 	{
@@ -1183,8 +1068,6 @@ bool artdaq::SharedMemoryManager::Read(int buffer, void* data, size_t size)
 	{
 		Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 	}
-	std::lock_guard<std::mutex> lk(buffer_mutexes_[buffer]);
-	// TraceLock lk(buffer_mutexes_[buffer], 27, "ReadBuffer" + std::to_string(buffer));
 	auto shmBuf = getBufferInfo_(buffer);
 	if (shmBuf == nullptr)
 	{
@@ -1245,8 +1128,8 @@ std::string artdaq::SharedMemoryManager::toString()
 		     << "sequenceID: " << std::to_string(buf->sequence_id) << std::endl
 		     << "writePos: " << std::to_string(buf->writePos) << std::endl
 		     << "readPos: " << std::to_string(buf->readPos) << std::endl
-		     << "sem: " << FlagToString(buf->sem) << std::endl
-		     << "Owner: " << std::to_string(buf->sem_id.load()) << std::endl
+		     << "sem: " << FlagToString(buf->semaphore.load().flags) << std::endl
+		     << "Owner: " << std::to_string(buf->semaphore.load().id) << std::endl
 		     << "Last Touch Time: " << std::to_string(buf->last_touch_time / 1000000.0) << std::endl
 		     << std::endl;
 	}
@@ -1284,7 +1167,8 @@ std::vector<std::pair<int, artdaq::SharedMemoryManager::BufferSemaphoreFlags>> a
 	for (size_t ii = 0; ii < size(); ++ii)
 	{
 		auto buf = getBufferInfo_(ii);
-		output[ii] = std::make_pair(buf->sem_id.load(), buf->sem.load());
+		auto semaphore = buf->semaphore.load();
+		output[ii] = std::make_pair(semaphore.id, semaphore.flags);
 	}
 	return output;
 }
@@ -1299,24 +1183,27 @@ bool artdaq::SharedMemoryManager::checkBuffer_(ShmBuffer* buffer, BufferSemaphor
 		}
 		return false;
 	}
-	TLOG(TLVL_CHKBUFFER) << "checkBuffer_: Checking that buffer with SeqID " << buffer->sequence_id << " has sem_id " << manager_id_ << " (Current: " << buffer->sem_id << ") and is in state " << FlagToString(flags) << " (current: " << FlagToString(buffer->sem) << ")";
+
+	auto semaphore = buffer->semaphore.load();
+	TLOG(TLVL_CHKBUFFER) << "checkBuffer_: Checking that buffer with SeqID " << buffer->sequence_id << " has sem_id " << manager_id_ << " (Current: " << semaphore.id << ") and is in state "
+	                     << FlagToString(flags) << " (current: " << FlagToString(semaphore.flags) << ")";
 	if (exceptions)
 	{
-		if (buffer->sem != flags)
+		if (semaphore.flags != flags)
 		{
-			Detach(true, "StateAccessViolation", "Shared Memory buffer is not in the correct state! (expected " + FlagToString(flags) + ", actual " + FlagToString(buffer->sem) + ")");
+			Detach(true, "StateAccessViolation", "Shared Memory buffer is not in the correct state! (expected " + FlagToString(flags) + ", actual " + FlagToString(semaphore.flags) + ")");
 		}
-		if (buffer->sem_id != manager_id_)
+		if (semaphore.id != manager_id_)
 		{
-			Detach(true, "OwnerAccessViolation", "Shared Memory buffer is not owned by this manager instance! (Expected: " + std::to_string(manager_id_) + ", Actual: " + std::to_string(buffer->sem_id) + ")");
+			Detach(true, "OwnerAccessViolation", "Shared Memory buffer is not owned by this manager instance! (Expected: " + std::to_string(manager_id_) + ", Actual: " + std::to_string(semaphore.id) + ")");
 		}
 	}
-	bool ret = (buffer->sem_id == manager_id_ || (buffer->sem_id == -1 && (flags == BufferSemaphoreFlags::Full || flags == BufferSemaphoreFlags::Empty))) && buffer->sem == flags;
+	bool ret = (semaphore.id == manager_id_ || (semaphore.id == -1 && (flags == BufferSemaphoreFlags::Full || flags == BufferSemaphoreFlags::Empty))) && semaphore.flags == flags;
 
 	if (!ret)
 	{
 		TLOG(TLVL_WARNING) << "CheckBuffer detected issue with buffer with SeqID " << buffer->sequence_id << "!"
-		                   << " ID: " << buffer->sem_id << " (Expected " << manager_id_ << "), Flag: " << FlagToString(buffer->sem) << " (Expected " << FlagToString(flags) << "). "
+		                   << " ID: " << semaphore.id << " (Expected " << manager_id_ << "), Flag: " << FlagToString(semaphore.flags) << " (Expected " << FlagToString(flags) << "). "
 		                   << R"(ID -1 is okay if expected flag is "Full" or "Empty".)";
 	}
 
@@ -1325,9 +1212,15 @@ bool artdaq::SharedMemoryManager::checkBuffer_(ShmBuffer* buffer, BufferSemaphor
 
 void artdaq::SharedMemoryManager::touchBuffer_(ShmBuffer* buffer)
 {
-	if ((buffer == nullptr) || (buffer->sem_id != -1 && buffer->sem_id != manager_id_))
+	if (buffer == nullptr)
 	{
-		//TLOG(TLVL_CHKBUFFER + 1) << "touchBuffer_: Not touching buffer at " << static_cast<void*>(buffer) << " with sequence_id " << buffer->sequence_id;
+		// TLOG(TLVL_CHKBUFFER + 1) << "touchBuffer_: Not touching buffer at " << static_cast<void*>(buffer) << " with sequence_id " << buffer->sequence_id;
+		return;
+	}
+	auto semaphore = buffer->semaphore.load();
+	if ((semaphore.id != -1 && semaphore.id != manager_id_))
+	{
+		// TLOG(TLVL_CHKBUFFER + 1) << "touchBuffer_: Not touching buffer at " << static_cast<void*>(buffer) << " with sequence_id " << buffer->sequence_id;
 		return;
 	}
 	TLOG(TLVL_CHKBUFFER + 1) << "touchBuffer_: Touching buffer at " << static_cast<void*>(buffer) << " with sequence_id " << buffer->sequence_id;
@@ -1340,7 +1233,7 @@ void artdaq::SharedMemoryManager::Detach(bool throwException, const std::string&
 	if (IsValid())
 	{
 		TLOG(TLVL_DETACH) << "Detach: Resetting owned buffers";
-		auto bufs = GetBuffersOwnedByManager(false);
+		auto bufs = GetBuffersOwnedByManager();
 		for (auto buf : bufs)
 		{
 			auto shmBuf = getBufferInfo_(buf);
@@ -1348,15 +1241,17 @@ void artdaq::SharedMemoryManager::Detach(bool throwException, const std::string&
 			{
 				continue;
 			}
-			if (shmBuf->sem == BufferSemaphoreFlags::Writing)
+			auto semaphore = shmBuf->semaphore.load();
+			if (semaphore.flags == BufferSemaphoreFlags::Writing)
 			{
-				shmBuf->sem = BufferSemaphoreFlags::Empty;
+				ShmBufferSem release(BufferSemaphoreFlags::Empty, -1);
+				shmBuf->semaphore.compare_exchange_strong(semaphore, release);  // Ignoring return code in Detach
 			}
-			else if (shmBuf->sem == BufferSemaphoreFlags::Reading)
+			else if (semaphore.flags == BufferSemaphoreFlags::Reading)
 			{
-				shmBuf->sem = BufferSemaphoreFlags::Full;
+				ShmBufferSem release(BufferSemaphoreFlags::Full, -1);
+				shmBuf->semaphore.compare_exchange_strong(semaphore, release);  // Ignoring return code in Detach
 			}
-			shmBuf->sem_id = -1;
 		}
 		if (registered_reader_)
 		{
