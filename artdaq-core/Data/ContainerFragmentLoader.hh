@@ -194,7 +194,6 @@ inline void artdaq::ContainerFragmentLoader::addFragment(artdaq::Fragment& frag,
 	reset_index_ptr_();
 }
 
-
 inline void artdaq::ContainerFragmentLoader::addFragments(artdaq::Fragments& frags, bool allowDifferentTypes)
 {
 	TLOG(TLVL_DEBUG + 33, "ContainerFragmentLoader") << "addFragments: Adding " << frags.size() << " Fragments to Container";

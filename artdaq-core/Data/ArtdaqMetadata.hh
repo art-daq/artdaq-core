@@ -14,7 +14,7 @@ struct ArtdaqMetadata;
  */
 struct artdaq::ArtdaqMetadata
 {
-	int rank{-1};                     ///< Rank of the producing artdaq process
+	int rank{-1};                          ///< Rank of the producing artdaq process
 	std::vector<uint16_t> fragment_ids{};  ///< Fragment IDs of the generating process (if any)
 	std::string metadata_tag{};            ///< User-defined tag, to help decoding the metadata_string
 	std::string metadata_string{};         ///< Unstructured string data

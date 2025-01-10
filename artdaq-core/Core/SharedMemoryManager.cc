@@ -315,7 +315,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 		{
 			buffer_num = (ii + rp) % shm_ptr_->buffer_count;
 
-			//TLOG(TLVL_GETBUFFER + 1) << "Checking if buffer " << buffer_num << " is stale. Shm destructive_read_mode=" << shm_ptr_->destructive_read_mode;
+			// TLOG(TLVL_GETBUFFER + 1) << "Checking if buffer " << buffer_num << " is stale. Shm destructive_read_mode=" << shm_ptr_->destructive_read_mode;
 			ResetBuffer(buffer_num);
 
 			auto buf = getBufferInfo_(buffer_num);
@@ -331,7 +331,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 			{
 				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
 				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_;
-                // Claim the buffer if it is in my sequence, I haven't claimed buffers before, or if we are in Broadcast mode
+				// Claim the buffer if it is in my sequence, I haven't claimed buffers before, or if we are in Broadcast mode
 				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + reader_count < last_seen_id_)
 				{
 					buffer_ptr = buf;
@@ -356,11 +356,11 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 
 					TLOG(TLVL_GETBUFFER) << "Returning " << buffer_num;
 					return buffer_num;
-                }
+				}
 			}
 		}
 
-        if (buffer_ptr == nullptr)
+		if (buffer_ptr == nullptr)
 		{
 			continue;
 		}
@@ -681,18 +681,18 @@ std::deque<int> artdaq::SharedMemoryManager::GetBuffersOwnedByManager()
 		return output;
 	}
 	TLOG(TLVL_BUFFER) << "GetBuffersOwnedByManager BEGIN";
-		for (size_t ii = 0; ii < buffer_count; ++ii)
+	for (size_t ii = 0; ii < buffer_count; ++ii)
+	{
+		auto buf = getBufferInfo_(ii);
+		if (buf == nullptr)
 		{
-			auto buf = getBufferInfo_(ii);
-			if (buf == nullptr)
-			{
-				continue;
-			}
-			if (buf->semaphore.load().id == manager_id_)
-			{
-				output.push_back(ii);
-			}
+			continue;
 		}
+		if (buf->semaphore.load().id == manager_id_)
+		{
+			output.push_back(ii);
+		}
+	}
 
 	TLOG(TLVL_BUFFER) << "GetBuffersOwnedByManager: own " << output.size() << " / " << buffer_count << " buffers.";
 	return output;

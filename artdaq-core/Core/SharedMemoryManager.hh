@@ -327,11 +327,11 @@ public:
 	 */
 	size_t GetBufferCount() const { return IsValid() ? shm_ptr_->next_sequence_id : 0; }
 
-    /**
-     * \brief Get the number of reader instances connected to the Shared Memory
-     * \return The number of attached readers, as reported by the readers
-     */
-    int GetReaderCount() { return IsValid() ? shm_ptr_->reader_count.load() : 0; }
+	/**
+	 * \brief Get the number of reader instances connected to the Shared Memory
+	 * \return The number of attached readers, as reported by the readers
+	 */
+	int GetReaderCount() { return IsValid() ? shm_ptr_->reader_count.load() : 0; }
 	/**
 	 * \brief Gets the highest buffer number either written or read by this SharedMemoryManager
 	 * \return The highest buffer id written or read by this SharedMemoryManager
@@ -398,16 +398,16 @@ private:
 	SharedMemoryManager& operator=(SharedMemoryManager const&) = delete;
 	SharedMemoryManager& operator=(SharedMemoryManager&&) = delete;
 
-    struct ShmBufferSem
-    {
+	struct ShmBufferSem
+	{
 		BufferSemaphoreFlags flags;
 		int id;
 
-        ShmBufferSem()
-		    : flags(BufferSemaphoreFlags::Empty), id(-1){}
-        ShmBufferSem(BufferSemaphoreFlags f, int i)
+		ShmBufferSem()
+		    : flags(BufferSemaphoreFlags::Empty), id(-1) {}
+		ShmBufferSem(BufferSemaphoreFlags f, int i)
 		    : flags(f), id(i) {}
-    };
+	};
 
 	struct ShmBuffer
 	{
