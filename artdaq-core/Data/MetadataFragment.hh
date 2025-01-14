@@ -1,8 +1,8 @@
 #ifndef artdaq_core_Data_MetadataFragment_hh
 #define artdaq_core_Data_MetadataFragment_hh
 
-#include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/ArtdaqMetadata.hh"
+#include "artdaq-core/Data/Fragment.hh"
 
 namespace artdaq {
 class MetadataFragment;
@@ -12,7 +12,7 @@ class artdaq::MetadataFragment
 {
 public:
 	explicit MetadataFragment(artdaq::Fragment const& frag)
-	    : artdaq_fragment_(frag){}
+	    : artdaq_fragment_(frag) {}
 
 	ArtdaqMetadata get_metadata();
 

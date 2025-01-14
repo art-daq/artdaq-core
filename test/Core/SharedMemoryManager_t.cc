@@ -360,7 +360,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 	uint8_t data[0x1000];
 	std::generate_n(data, 0x1000, [&]() { return ++n; });
 
-    const int reader_count = 10;
+	const int reader_count = 10;
 	const size_t n_writes = 1'000'000;
 
 	auto reader_proc = [key, reader_count]() {
@@ -372,11 +372,12 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 		reader_man.RegisterReader();
 		auto my_id = static_cast<size_t>(reader_man.GetMyId() - 1);
 
-        TLOG(TLVL_INFO) << "Reader " << my_id << " waiting for other readers..." << reader_man.GetReaderCount();
-        while (reader_man.GetReaderCount() < reader_count) {
+		TLOG(TLVL_INFO) << "Reader " << my_id << " waiting for other readers..." << reader_man.GetReaderCount();
+		while (reader_man.GetReaderCount() < reader_count)
+		{
 			reader_man.ReadyForRead();
 			std::this_thread::yield();
-        }
+		}
 
 		TLOG(TLVL_INFO) << "Reader " << my_id << " starting";
 		while (!reader_man.IsEndOfData())
@@ -405,21 +406,23 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 		reader_man.UnregisterReader();
 	};
 
-    auto writer_proc = [&man, n_writes]() {
+	auto writer_proc = [&man, n_writes]() {
 		TLOG(TLVL_INFO) << "Writer Starting";
 		size_t write_counter = 0;
 		auto current_oom = 1;
 		auto start_time = std::chrono::steady_clock::now();
-		while (write_counter < n_writes) {
+		while (write_counter < n_writes)
+		{
 			if (man.ReadyForWrite(false))
 			{
-                if (write_counter % current_oom == 0) {
+				if (write_counter % current_oom == 0)
+				{
 					TLOG(TLVL_INFO) << "Writing buffer " << write_counter;
 					if (write_counter >= static_cast<size_t>((10 * current_oom) - 1))
 					{
 						current_oom *= 10;
-                    }
-                }
+					}
+				}
 				int buf = man.GetBufferForWriting(false);
 				man.MarkBufferFull(buf);
 				write_counter++;
@@ -432,18 +435,20 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 		TLOG(TLVL_INFO) << "Writer proc END";
 	};
 
-    TLOG(TLVL_INFO) << "Starting threads";
-    std::vector<std::jthread> threads;
-    for (int ii = 0; ii < reader_count; ++ii) {
+	TLOG(TLVL_INFO) << "Starting threads";
+	std::vector<std::jthread> threads;
+	for (int ii = 0; ii < reader_count; ++ii)
+	{
 		threads.emplace_back(reader_proc);
-    }
+	}
 	threads.emplace_back(writer_proc);
 
-    TLOG(TLVL_INFO) << "Joining threads";
-    threads[threads.size() - 1].join();
-    for (auto& thread : threads) {
-		if(thread.joinable()) thread.join();
-    }
+	TLOG(TLVL_INFO) << "Joining threads";
+	threads[threads.size() - 1].join();
+	for (auto& thread : threads)
+	{
+		if (thread.joinable()) thread.join();
+	}
 
 	TLOG(TLVL_DEBUG) << "END TEST RoundRobin";
 }

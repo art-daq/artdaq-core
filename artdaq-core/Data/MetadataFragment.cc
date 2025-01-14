@@ -5,13 +5,13 @@ artdaq::ArtdaqMetadata artdaq::MetadataFragment::get_metadata()
 	ArtdaqMetadata output;
 
 	auto ptr = reinterpret_cast<uint8_t const*>(artdaq_fragment_.dataBeginBytes());
-	
+
 	size_t element_size = *reinterpret_cast<size_t const*>(ptr);
 	ptr += sizeof(size_t);
 	assert(element_size == sizeof(output.rank));
 	output.rank = *reinterpret_cast<int const*>(ptr);
 	ptr += element_size;
-	
+
 	element_size = *reinterpret_cast<size_t const*>(ptr);
 	ptr += sizeof(size_t);
 	assert(element_size % sizeof(uint16_t) == 0);
