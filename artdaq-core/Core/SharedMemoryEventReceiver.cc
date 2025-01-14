@@ -15,7 +15,15 @@ artdaq::SharedMemoryEventReceiver::SharedMemoryEventReceiver(uint32_t shm_key, u
     , broadcasts_(broadcast_shm_key)
 {
 	TLOG(TLVL_DEBUG + 33) << "SharedMemoryEventReceiver CONSTRUCTOR";
+	data_.RegisterReader();
+	broadcasts_.RegisterReader();
 }
+
+artdaq::SharedMemoryEventReceiver::~SharedMemoryEventReceiver() noexcept
+{
+	data_.UnregisterReader();
+	broadcasts_.UnregisterReader();
+};
 
 bool artdaq::SharedMemoryEventReceiver::ReadyForRead(bool broadcast, size_t timeout_us)
 {

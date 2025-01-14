@@ -369,6 +369,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 		size_t misses_after_start = 0;
 		size_t last_read_id = 0;
 		artdaq::SharedMemoryManager reader_man(key);
+		reader_man.RegisterReader();
 		auto my_id = static_cast<size_t>(reader_man.GetMyId() - 1);
 
         TLOG(TLVL_INFO) << "Reader " << my_id << " waiting for other readers..." << reader_man.GetReaderCount();
@@ -401,6 +402,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 			}
 		}
 		TLOG(TLVL_INFO) << "Reader " << my_id << " read " << counter << " buffers, " << ooo_counter << " of them were out of round-robin order, and " << misses_after_start << " times there was no data available";
+		reader_man.UnregisterReader();
 	};
 
     auto writer_proc = [&man, n_writes]() {

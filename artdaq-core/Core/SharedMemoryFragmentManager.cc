@@ -7,7 +7,13 @@ artdaq::SharedMemoryFragmentManager::SharedMemoryFragmentManager(uint32_t shm_ke
     : SharedMemoryManager(shm_key, buffer_count, max_buffer_size, buffer_timeout_us)
     , active_buffer_(-1)
 {
+	RegisterWriter();
 }
+
+artdaq::SharedMemoryFragmentManager::~SharedMemoryFragmentManager() noexcept
+{
+	UnregisterWriter();
+};
 
 bool artdaq::SharedMemoryFragmentManager::ReadyForWrite(bool overwrite)
 {

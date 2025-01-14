@@ -294,12 +294,7 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 int artdaq::SharedMemoryManager::GetBufferForReading()
 {
 	TLOG(TLVL_GETBUFFER) << "GetBufferForReading BEGIN";
-
-	if (!registered_reader_)
-	{
-		shm_ptr_->reader_count++;
-		registered_reader_ = true;
-	}
+	RegisterReader();
 
 	TLOG(TLVL_GETBUFFER) << "Scanning " << shm_ptr_->buffer_count << " buffers";
 
@@ -330,7 +325,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 			if (semaphore.flags == BufferSemaphoreFlags::Full && (semaphore.id == -1 || semaphore.id == manager_id_) && (shm_ptr_->destructive_read_mode || sequence_id > last_seen_id_))
 			{
 				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
-				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_;
+				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_ << ", reader_count=" << reader_count;
                 // Claim the buffer if it is in my sequence, I haven't claimed buffers before, or if we are in Broadcast mode
 				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + reader_count < last_seen_id_)
 				{
@@ -374,11 +369,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 {
 	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting BEGIN, overwrite=" << (overwrite ? "true" : "false");
 
-	if (!registered_writer_)
-	{
-		shm_ptr_->writer_count++;
-		registered_writer_ = true;
-	}
+	RegisterWriter();
 
 	auto wp = shm_ptr_->writer_pos.load();
 
@@ -517,12 +508,6 @@ size_t artdaq::SharedMemoryManager::ReadReadyCount()
 		return 0;
 	}
 
-	if (!registered_reader_)
-	{
-		shm_ptr_->reader_count++;
-		registered_reader_ = true;
-	}
-
 	TLOG(TLVL_READREADY) << std::hex << std::showbase << shm_key_ << " ReadReadyCount BEGIN" << std::dec;
 	TLOG(TLVL_READREADY) << "ReadReadyCount scanning " << shm_ptr_->buffer_count << " buffers";
 	size_t count = 0;
@@ -593,12 +578,6 @@ bool artdaq::SharedMemoryManager::ReadyForRead()
 	if (!IsValid())
 	{
 		return false;
-	}
-
-	if (!registered_reader_)
-	{
-		shm_ptr_->reader_count++;
-		registered_reader_ = true;
 	}
 
 	TLOG(TLVL_READREADY) << std::hex << std::showbase << shm_key_ << " ReadyForRead BEGIN" << std::dec;
@@ -1253,16 +1232,8 @@ void artdaq::SharedMemoryManager::Detach(bool throwException, const std::string&
 				shmBuf->semaphore.compare_exchange_strong(semaphore, release);  // Ignoring return code in Detach
 			}
 		}
-		if (registered_reader_)
-		{
-			shm_ptr_->reader_count--;
-			registered_reader_ = false;
-		}
-		if (registered_writer_)
-		{
-			shm_ptr_->writer_count--;
-			registered_writer_ = false;
-		}
+		UnregisterReader();
+		UnregisterWriter();
 	}
 
 	if (shm_ptr_ != nullptr)
