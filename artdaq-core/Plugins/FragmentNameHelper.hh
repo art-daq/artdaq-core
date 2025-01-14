@@ -169,7 +169,8 @@ public:
 		else
 		{
 			auto systemTypes = artdaq::Fragment::MakeVerboseSystemTypeMap();
-			if (systemTypes.count(fragment.type())) {
+			if (systemTypes.count(fragment.type()))
+			{
 				TLOG(TLVL_DEBUG + 33) << "Matched fragment type " << static_cast<int>(fragment.type()) << " to extended system type " << systemTypes.at(fragment.type());
 				instance_name = systemTypes.at(fragment.type());
 			}
