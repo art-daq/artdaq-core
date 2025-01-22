@@ -23,7 +23,7 @@ public:
 	/**
 	 * \brief SharedMemoryEventReceiver Destructor
 	 */
-	virtual ~SharedMemoryEventReceiver() = default;
+	virtual ~SharedMemoryEventReceiver() noexcept;
 
 	/**
 	 * \brief Determine whether an event is available for reading

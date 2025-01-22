@@ -217,6 +217,42 @@ public:
 		if (manager_id_ == 0 && IsValid()) shm_ptr_->next_id = 1;
 	}
 
+	void RegisterReader()
+	{
+		if (IsValid() && !registered_reader_)
+		{
+			shm_ptr_->reader_count++;
+			registered_reader_ = true;
+		}
+	}
+
+	void RegisterWriter()
+	{
+		if (IsValid() && !registered_writer_)
+		{
+			shm_ptr_->writer_count++;
+			registered_writer_ = true;
+		}
+	}
+
+	void UnregisterReader()
+	{
+		if (IsValid() && registered_reader_)
+		{
+			shm_ptr_->reader_count--;
+			registered_reader_ = false;
+		}
+	}
+
+	void UnregisterWriter()
+	{
+		if (IsValid() && registered_writer_)
+		{
+			shm_ptr_->writer_count--;
+			registered_writer_ = false;
+		}
+	}
+
 	/**
 	 * \brief Get the ID number of the current SharedMemoryManager
 	 * \return The ID number of the current SharedMemoryManager

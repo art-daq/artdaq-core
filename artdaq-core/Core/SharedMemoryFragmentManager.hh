@@ -24,7 +24,7 @@ public:
 	/**
 	 * \brief SharedMemoryFragmentManager destructor
 	 */
-	virtual ~SharedMemoryFragmentManager() = default;
+	virtual ~SharedMemoryFragmentManager() noexcept;
 	SharedMemoryFragmentManager(SharedMemoryFragmentManager const&) = delete;             ///< Copy Constructor is deleted
 	SharedMemoryFragmentManager(SharedMemoryFragmentManager&&) = delete;                  ///< Move Constructor is deleted
 	SharedMemoryFragmentManager& operator=(SharedMemoryFragmentManager const&) = delete;  ///< Copy Assignment Operator is deleted
