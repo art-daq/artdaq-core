@@ -15,12 +15,12 @@ cet_make_library(SOURCE
   StatisticsCollection.cc
   LIBRARIES
   PUBLIC
-	artdaq_core::artdaq-core_Data
-  artdaq_core::artdaq-core_Utilities
+	artdaq-core::Data
+  artdaq-core::Utilities
 	Boost::thread
   Threads::Threads
   PRIVATE
-  artdaq_core::artdaq-core_Utilities_TraceLock
+  artdaq-core::Utilities_TraceLock
 	cetlib_except::cetlib_except
   TRACE::TRACE
 )
