@@ -9,7 +9,7 @@ namespace artdaqcore {
   artdaq::PackageBuildInfo GetPackageBuildInfo::getPackageBuildInfo() {
 
     artdaq::PackageBuildInfo pkg;
-    
+
     pkg.setPackageName("artdaq-core");
     pkg.setPackageVersion("@version_with_git@");
     pkg.setBuildTimestamp("@utcDateTime@");
@@ -18,4 +18,3 @@ namespace artdaqcore {
   }
 
 }
-

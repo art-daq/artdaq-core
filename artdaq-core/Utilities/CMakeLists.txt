@@ -29,8 +29,8 @@ cet_make_library(LIBRARY_NAME artdaq-core_Utilities_TraceLock INTERFACE
 
 cet_make_library(
 	LIBRARY_NAME artdaq-core_Utilities_ExceptionStackTrace
-	SOURCE 
-	ExceptionStackTrace.cc 
+	SOURCE
+	ExceptionStackTrace.cc
   LIBRARIES
   PUBLIC
   Threads::Threads
