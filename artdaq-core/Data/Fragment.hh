@@ -1080,16 +1080,16 @@ void artdaq::Fragment::updateMetadata(const T& metadata)
 inline void
 artdaq::Fragment::resize(std::size_t sz)
 {
-	vals_.resize(sz + fragmentHeaderPtr()->metadata_word_count +
-	             headerSizeWords());
+	vals_.resize(sz + fragmentHeaderPtr()->metadata_word_count
+	                      headerSizeWords());
 	updateFragmentHeaderWC_();
 }
 
 inline void
 artdaq::Fragment::resize(std::size_t sz, RawDataType v)
 {
-	vals_.resize(sz + fragmentHeaderPtr()->metadata_word_count +
-	                 headerSizeWords(),
+	vals_.resize(sz + fragmentHeaderPtr()->metadata_word_count
+	                      headerSizeWords(),
 	             v);
 	updateFragmentHeaderWC_();
 }
@@ -1105,8 +1105,8 @@ inline void
 artdaq::Fragment::resizeBytesWithCushion(std::size_t szbytes, double growthFactor)
 {
 	RawDataType nwords = ceil(szbytes / static_cast<double>(sizeof(RawDataType)));
-	vals_.resizeWithCushion(nwords + fragmentHeaderPtr()->metadata_word_count +
-	                            headerSizeWords(),
+	vals_.resizeWithCushion(nwords + fragmentHeaderPtr()->metadata_word_count
+	                                     headerSizeWords(),
 	                        growthFactor);
 	updateFragmentHeaderWC_();
 }
@@ -1138,8 +1138,9 @@ artdaq::Fragment::autoResize()
 inline artdaq::Fragment::iterator
 artdaq::Fragment::dataBegin()
 {
-	return vals_.begin() + headerSizeWords() +
-	       fragmentHeader().metadata_word_count;
+	return vals_.begin() + headerSizeWords()
+	                           fragmentHeader()
+	                               .metadata_word_count;
 }
 
 inline artdaq::Fragment::iterator
@@ -1157,8 +1158,9 @@ artdaq::Fragment::headerBegin()
 inline artdaq::Fragment::const_iterator
 artdaq::Fragment::dataBegin() const
 {
-	return vals_.begin() + headerSizeWords() +
-	       fragmentHeader().metadata_word_count;
+	return vals_.begin() + headerSizeWords()
+	                           fragmentHeader()
+	                               .metadata_word_count;
 }
 
 inline artdaq::Fragment::const_iterator
@@ -1190,8 +1192,9 @@ artdaq::Fragment::empty()
 inline void
 artdaq::Fragment::reserve(std::size_t cap)
 {
-	vals_.reserve(cap + headerSizeWords() +
-	              fragmentHeader().metadata_word_count);
+	vals_.reserve(cap + headerSizeWords()
+	                        fragmentHeader()
+	                            .metadata_word_count);
 }
 
 inline void

@@ -187,16 +187,14 @@ BOOST_AUTO_TEST_CASE(Resize)
 	artdaq::Fragment f1;
 	f1.resize(1234);
 	BOOST_REQUIRE_EQUAL(f1.dataSize(), (size_t)1234);
-	BOOST_REQUIRE_EQUAL(f1.size(), (size_t)1234 +
-	                                   artdaq::detail::RawFragmentHeader::num_words());
+	BOOST_REQUIRE_EQUAL(f1.size(), (size_t)1234 artdaq::detail::RawFragmentHeader::num_words());
 
 	// fragment with metadata
 	MetadataTypeOne mdOneA{};
 	artdaq::Fragment f2(1, 123, 3, 5, mdOneA);
 	f2.resize(129);
 	BOOST_REQUIRE_EQUAL(f2.dataSize(), (size_t)129);
-	BOOST_REQUIRE_EQUAL(f2.size(), (size_t)129 + 2 +
-	                                   artdaq::detail::RawFragmentHeader::num_words());
+	BOOST_REQUIRE_EQUAL(f2.size(), (size_t)129 + 2 artdaq::detail::RawFragmentHeader::num_words());
 }
 
 BOOST_AUTO_TEST_CASE(Empty)
@@ -214,8 +212,7 @@ BOOST_AUTO_TEST_CASE(Empty)
 	f2.resize(0);
 	BOOST_REQUIRE_EQUAL(f2.empty(), true);
 	BOOST_REQUIRE_EQUAL(f2.dataSize(), (size_t)0);
-	BOOST_REQUIRE_EQUAL(f2.size(), (size_t)2 +
-	                                   artdaq::detail::RawFragmentHeader::num_words());
+	BOOST_REQUIRE_EQUAL(f2.size(), (size_t)2 artdaq::detail::RawFragmentHeader::num_words());
 
 	artdaq::Fragment f3;
 	BOOST_REQUIRE_EQUAL(f3.empty(), true);
@@ -245,8 +242,7 @@ BOOST_AUTO_TEST_CASE(Clear)
 	f2.clear();
 	BOOST_REQUIRE_EQUAL(f2.empty(), true);
 	BOOST_REQUIRE_EQUAL(f2.dataSize(), (size_t)0);
-	BOOST_REQUIRE_EQUAL(f2.size(), (size_t)2 +
-	                                   artdaq::detail::RawFragmentHeader::num_words());
+	BOOST_REQUIRE_EQUAL(f2.size(), (size_t)2 artdaq::detail::RawFragmentHeader::num_words());
 
 	artdaq::Fragment f3;
 	BOOST_REQUIRE_EQUAL(f3.empty(), true);
@@ -274,8 +270,7 @@ BOOST_AUTO_TEST_CASE(Addresses)
 	// no metadata
 	artdaq::Fragment f1(200);
 	BOOST_REQUIRE_EQUAL(f1.dataSize(), (size_t)200);
-	BOOST_REQUIRE_EQUAL(f1.size(), (size_t)200 +
-	                                   artdaq::detail::RawFragmentHeader::num_words());
+	BOOST_REQUIRE_EQUAL(f1.size(), (size_t)200 artdaq::detail::RawFragmentHeader::num_words());
 	artdaq::RawDataType* haddr = f1.headerAddress();
 	artdaq::RawDataType* daddr = f1.dataAddress();
 	BOOST_REQUIRE_EQUAL(daddr,
@@ -290,8 +285,7 @@ BOOST_AUTO_TEST_CASE(Addresses)
 	// Const versions
 	const artdaq::Fragment cf1(f1);
 	BOOST_REQUIRE_EQUAL(cf1.dataSize(), (size_t)200);
-	BOOST_REQUIRE_EQUAL(cf1.size(), (size_t)200 +
-	                                    artdaq::detail::RawFragmentHeader::num_words());
+	BOOST_REQUIRE_EQUAL(cf1.size(), (size_t)200 artdaq::detail::RawFragmentHeader::num_words());
 	const artdaq::RawDataType* chaddr = cf1.headerBegin();
 	const artdaq::RawDataType* cdaddr = cf1.dataBegin();
 	BOOST_REQUIRE_EQUAL(cdaddr,
@@ -303,8 +297,7 @@ BOOST_AUTO_TEST_CASE(Addresses)
 	MetadataTypeOne mdOneA{};
 	artdaq::Fragment f2(135, 101, 0, 3, mdOneA);
 	BOOST_REQUIRE_EQUAL(f2.dataSize(), (size_t)135);
-	BOOST_REQUIRE_EQUAL(f2.size(), (size_t)135 + 2 +
-	                                   artdaq::detail::RawFragmentHeader::num_words());
+	BOOST_REQUIRE_EQUAL(f2.size(), (size_t)135 + 2 artdaq::detail::RawFragmentHeader::num_words());
 	haddr = f2.headerAddress();
 	daddr = f2.dataAddress();
 	artdaq::RawDataType* maddr = f2.metadataAddress();

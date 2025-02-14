@@ -135,7 +135,7 @@ inline artdaq::ContainerFragmentLoader::ContainerFragmentLoader(artdaq::Fragment
 	artdaq_Fragment_.setMetadata<Metadata>(m);
 
 	if (artdaq_Fragment_.size() !=
-	    artdaq::detail::RawFragmentHeader::num_words() +
+	    artdaq::detail::RawFragmentHeader::num_words()
 	        words_to_frag_words_(Metadata::size_words))
 	{
 		TLOG(TLVL_ERROR, "ContainerFragmentLoader") << "ContainerFragmentLoader: Raw artdaq::Fragment object size suggests it does not consist of its own header + the ContainerFragment::Metadata object";
