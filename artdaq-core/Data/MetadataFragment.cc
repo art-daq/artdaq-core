@@ -5,16 +5,16 @@ artdaq::ArtdaqMetadata artdaq::MetadataFragment::get_metadata()
 	ArtdaqMetadata output;
 	auto total_size = 0;
 	auto ptr = reinterpret_cast<uint8_t const*>(artdaq_fragment_.dataBeginBytes());
-    if (total_size + sizeof(size_t) > artdaq_fragment_.dataSizeBytes()) {
+	if (total_size + sizeof(size_t) > artdaq_fragment_.dataSizeBytes())
+	{
 		TLOG(TLVL_WARNING) << "MetadataFragment data ended before metadata extraction completed! Make sure that this Fragment is actually a MetadataFragment!";
 		return output;
-    }
+	}
 	total_size += sizeof(size_t);
 	size_t element_size = *reinterpret_cast<size_t const*>(ptr);
 	ptr += sizeof(size_t);
 
-    
-    if (total_size + sizeof(output.rank) > artdaq_fragment_.dataSizeBytes())
+	if (total_size + sizeof(output.rank) > artdaq_fragment_.dataSizeBytes())
 	{
 		TLOG(TLVL_WARNING) << "MetadataFragment data ended before metadata extraction completed! Make sure that this Fragment is actually a MetadataFragment!";
 		return output;
@@ -33,8 +33,7 @@ artdaq::ArtdaqMetadata artdaq::MetadataFragment::get_metadata()
 	element_size = *reinterpret_cast<size_t const*>(ptr);
 	ptr += sizeof(size_t);
 
-    
-    if (total_size + element_size > artdaq_fragment_.dataSizeBytes())
+	if (total_size + element_size > artdaq_fragment_.dataSizeBytes())
 	{
 		TLOG(TLVL_WARNING) << "MetadataFragment data ended before metadata extraction completed! Make sure that this Fragment is actually a MetadataFragment!";
 		return output;
