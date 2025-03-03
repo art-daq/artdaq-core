@@ -4,7 +4,7 @@ cet_make_library(SOURCE
   MetadataFragment.cc
   LIBRARIES
   PUBLIC
-  artdaq_core::artdaq-core_Utilities
+  artdaq-core::Utilities
   cetlib_except::cetlib_except
   TRACE::MF
   TRACE::TRACE

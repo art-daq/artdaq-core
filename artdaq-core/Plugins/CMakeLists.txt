@@ -11,7 +11,7 @@ cet_make_library(LIBRARY_NAME fragmentNameHelper INTERFACE
 	EXPORT_SET PluginTypes
 	SOURCE FragmentNameHelper.hh
 	LIBRARIES INTERFACE
-	artdaq_core::artdaq-core_Data
+	artdaq-core::Data
   cetlib::cetlib
   cetlib::compiler_macros
 )
@@ -26,7 +26,7 @@ cet_make_library(LIBRARY_NAME generator INTERFACE
   EXPORT_SET PluginTypes
   SOURCE FragmentGenerator.hh
   LIBRARIES INTERFACE
-	artdaq_core::artdaq-core_Data
+	artdaq-core::Data
 )
 
 cet_write_plugin_builder(artdaq::generator artdaq::generator Modules
@@ -55,7 +55,7 @@ cet_make_library(SOURCE
 )
 
 cet_make_alias(NAME generatorMaker EXPORT_SET PluginSupport
-  TARGET artdaq_core::artdaq-core_Plugins
+  TARGET artdaq-core::Plugins
 )
 
 install_headers()

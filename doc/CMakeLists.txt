@@ -24,18 +24,21 @@ if(DOXYGEN_FOUND)
 	set(EXCLUDE_FILES "")
 	if(CM_EXCLUDE)
 		foreach(file ${CM_EXCLUDE})
-			set(EXCLUDE_FILES "${EXCLUDE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/../${file}")
+            file(REAL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${file} file_abs)
+			set(EXCLUDE_FILES "${EXCLUDE_FILES} ${file_abs}")
 		endforeach()
 	endif()
 
 	add_custom_target(${PROJECT_NAME}_doc ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tag)
 
 	set(TAG_FILES "")
-
+    
 	if(CM_DEPENDS)
 		foreach(dependency ${CM_DEPENDS})
-			if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../../${dependency})
-				set(TAG_FILES "${TAG_FILES} ${CMAKE_BINARY_DIR}/${dependency}/doc/${dependency}.tag=../../${dependency}/")
+			if(TARGET ${dependency}_doc)
+				get_target_property(tag_source ${dependency}_doc SOURCE_DIR)
+                file(RELATIVE_PATH tag_dir ${CMAKE_CURRENT_SOURCE_DIR}/.. ${tag_source}/../ )
+				set(TAG_FILES "${TAG_FILES} ${CMAKE_BINARY_DIR}/${dependency}/doc/${dependency}.tag=${tag_dir}")
 				add_dependencies(${PROJECT_NAME}_doc ${dependency}_doc)
 			else()
 				string(TOUPPER ${dependency} dependency_uc)
@@ -45,6 +48,7 @@ if(DOXYGEN_FOUND)
 	endif()
 
 	string(REPLACE ";" " " DOXYGEN_INCLUDE_PATH "${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}")
+    file(REAL_PATH ${PROJECT_SOURCE_DIR}/.. DOXYGEN_STRIP_FROM_PATH)
 
 	configure_file(${DOXYFILE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
 	configure_file(${DOXYFILE_DIR}/header.html.in ${CMAKE_CURRENT_BINARY_DIR}/header.html @ONLY)
