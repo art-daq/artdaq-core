@@ -187,6 +187,7 @@ public:
 	 */
 	void MarkBufferEmpty(int buffer, bool force = false, bool detachOnException = true);
 
+
 	/**
 	 * \brief Resets the buffer from Reading to Full. This operation will only have an
 	 * effect if performed by the owning manager or if the buffer has timed out.
@@ -194,6 +195,7 @@ public:
 	 * \return Whether the buffer has exceeded the maximum age
 	 */
 	bool ResetBuffer(int buffer);
+
 
 	/**
 	 * \brief Assign a new ID to the current SharedMemoryManager, if one has not yet been assigned
@@ -471,6 +473,11 @@ private:
 		int rank;
 		unsigned ready_magic;
 	};
+
+	/**
+	 *\brief Determine if the buffer is stale, and should be read by any available reader or reset
+	 */
+	bool isBufferStale_(ShmBuffer* buffer);
 
 	inline uint8_t* dataStart_() const
 	{

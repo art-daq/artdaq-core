@@ -327,7 +327,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
 				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_ << ", reader_count=" << reader_count;
 				// Claim the buffer if it is in my sequence, I haven't claimed buffers before, or if we are in Broadcast mode
-				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + reader_count < last_seen_id_)
+				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + reader_count < last_seen_id_ || isBufferStale_(buf))
 				{
 					buffer_ptr = buf;
 					ShmBufferSem claim(BufferSemaphoreFlags::Reading, manager_id_);
@@ -893,6 +893,23 @@ void artdaq::SharedMemoryManager::MarkBufferEmpty(int buffer, bool force, bool d
 	TLOG(TLVL_POS + 3) << "MarkBufferEmpty END, buffer=" << buffer << ", force=" << force;
 }
 
+bool artdaq::SharedMemoryManager::isBufferStale_(ShmBuffer* shmBuf)
+{
+    size_t delta = TimeUtils::gettimeofday_us() - shmBuf->last_touch_time;
+	if (delta > 0xFFFFFFFF)
+	{
+		TLOG(TLVL_RESET) << "Buffer has touch time in the future, setting it to current time and ignoring...";
+		shmBuf->last_touch_time = TimeUtils::gettimeofday_us();
+		return false;
+	}
+	if (shm_ptr_->buffer_timeout_us == 0 || delta <= shm_ptr_->buffer_timeout_us || shmBuf->semaphore.load().flags == BufferSemaphoreFlags::Empty)
+	{
+		return false;
+	}
+	TLOG(TLVL_RESET) << "Buffer at " << static_cast<void*>(shmBuf) << " is stale, time=" << TimeUtils::gettimeofday_us() << ", last touch=" << shmBuf->last_touch_time << ", d=" << delta << ", timeout=" << shm_ptr_->buffer_timeout_us;
+	return true;
+}
+
 bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 {
 	if (buffer >= shm_ptr_->buffer_count)
@@ -906,18 +923,9 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		return false;
 	}
 
-	size_t delta = TimeUtils::gettimeofday_us() - shmBuf->last_touch_time;
-	if (delta > 0xFFFFFFFF)
-	{
-		TLOG(TLVL_RESET) << "Buffer has touch time in the future, setting it to current time and ignoring...";
-		shmBuf->last_touch_time = TimeUtils::gettimeofday_us();
+    if (!isBufferStale_(shmBuf)) {
 		return false;
-	}
-	if (shm_ptr_->buffer_timeout_us == 0 || delta <= shm_ptr_->buffer_timeout_us || shmBuf->semaphore.load().flags == BufferSemaphoreFlags::Empty)
-	{
-		return false;
-	}
-	TLOG(TLVL_RESET) << "Buffer " << buffer << " at " << static_cast<void*>(shmBuf) << " is stale, time=" << TimeUtils::gettimeofday_us() << ", last touch=" << shmBuf->last_touch_time << ", d=" << delta << ", timeout=" << shm_ptr_->buffer_timeout_us;
+    }
 
 	auto semaphore = shmBuf->semaphore.load();
 	if (semaphore.id == manager_id_ && semaphore.flags == BufferSemaphoreFlags::Writing)
