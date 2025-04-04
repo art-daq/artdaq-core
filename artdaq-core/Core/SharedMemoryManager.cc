@@ -304,7 +304,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 		int buffer_num = -1;
 		ShmBuffer* buffer_ptr = nullptr;
 		auto rp = shm_ptr_->reader_pos.load();
-		auto reader_count = shm_ptr_->reader_count.load();
+		auto reader_count = GetReaderCount();
 
 		for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 		{
@@ -327,7 +327,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
 				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_ << ", reader_count=" << reader_count;
 				// Claim the buffer if it is in my sequence, I haven't claimed buffers before, or if we are in Broadcast mode
-				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + reader_count < last_seen_id_ || isBufferStale_(buf))
+				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || isBufferStale_(buf))
 				{
 					buffer_ptr = buf;
 					ShmBufferSem claim(BufferSemaphoreFlags::Reading, manager_id_);
@@ -895,7 +895,7 @@ void artdaq::SharedMemoryManager::MarkBufferEmpty(int buffer, bool force, bool d
 
 bool artdaq::SharedMemoryManager::isBufferStale_(ShmBuffer* shmBuf)
 {
-    size_t delta = TimeUtils::gettimeofday_us() - shmBuf->last_touch_time;
+	size_t delta = TimeUtils::gettimeofday_us() - shmBuf->last_touch_time;
 	if (delta > 0xFFFFFFFF)
 	{
 		TLOG(TLVL_RESET) << "Buffer has touch time in the future, setting it to current time and ignoring...";
@@ -923,9 +923,10 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		return false;
 	}
 
-    if (!isBufferStale_(shmBuf)) {
+	if (!isBufferStale_(shmBuf))
+	{
 		return false;
-    }
+	}
 
 	auto semaphore = shmBuf->semaphore.load();
 	if (semaphore.id == manager_id_ && semaphore.flags == BufferSemaphoreFlags::Writing)
@@ -1098,8 +1099,8 @@ std::string artdaq::SharedMemoryManager::toString()
 	     << "Buffer Size: " << std::to_string(shm_ptr_->buffer_size) << " bytes" << std::endl
 	     << "Buffers Written: " << std::to_string(shm_ptr_->next_sequence_id) << std::endl
 	     << "Rank of Writer: " << shm_ptr_->rank << std::endl
-	     << "Number of Writers: " << shm_ptr_->writer_count << std::endl
-	     << "Number of Readers: " << shm_ptr_->reader_count << std::endl
+	     << "Writers: " << std::hex << shm_ptr_->writer_mask << std::endl
+	     << "Readers: " << std::hex << shm_ptr_->reader_mask << std::endl
 	     << "Ready Magic Bytes: " << std::hex << std::showbase << shm_ptr_->ready_magic << std::dec << std::endl
 	     << std::endl;
 
@@ -1158,6 +1159,15 @@ std::vector<std::pair<int, artdaq::SharedMemoryManager::BufferSemaphoreFlags>> a
 		output[ii] = std::make_pair(semaphore.id, semaphore.flags);
 	}
 	return output;
+}
+
+void artdaq::SharedMemoryManager::GetNewId()
+{
+	if (manager_id_ < 0 && IsValid()) manager_id_ = shm_ptr_->next_id.fetch_add(1);
+	if (manager_id_ > 63)
+	{
+		TLOG(TLVL_ERROR) << "Too many processes attached to shared memory, writer/reader tracking will be broken! manager_id_=" << manager_id_;
+	}
 }
 
 bool artdaq::SharedMemoryManager::checkBuffer_(ShmBuffer* buffer, BufferSemaphoreFlags flags, bool exceptions)
