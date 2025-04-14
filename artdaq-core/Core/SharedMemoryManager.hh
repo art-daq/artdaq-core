@@ -2,6 +2,7 @@
 #define artdaq_core_Core_SharedMemoryManager_hh 1
 
 #include <atomic>
+#include <bitset>
 #include <deque>
 #include <iomanip>
 #include <list>
@@ -198,10 +199,7 @@ public:
 	/**
 	 * \brief Assign a new ID to the current SharedMemoryManager, if one has not yet been assigned
 	 */
-	void GetNewId()
-	{
-		if (manager_id_ < 0 && IsValid()) manager_id_ = shm_ptr_->next_id.fetch_add(1);
-	}
+	void GetNewId();
 
 	/**
 	 * \brief Get the number of attached SharedMemoryManagers
@@ -221,7 +219,7 @@ public:
 	{
 		if (IsValid() && !registered_reader_)
 		{
-			shm_ptr_->reader_count++;
+			shm_ptr_->reader_mask |= (static_cast<uint64_t>(1) << manager_id_);
 			registered_reader_ = true;
 		}
 	}
@@ -230,7 +228,7 @@ public:
 	{
 		if (IsValid() && !registered_writer_)
 		{
-			shm_ptr_->writer_count++;
+			shm_ptr_->writer_mask |= (static_cast<uint64_t>(1) << manager_id_);
 			registered_writer_ = true;
 		}
 	}
@@ -239,7 +237,7 @@ public:
 	{
 		if (IsValid() && registered_reader_)
 		{
-			shm_ptr_->reader_count--;
+			shm_ptr_->reader_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
 			registered_reader_ = false;
 		}
 	}
@@ -248,7 +246,7 @@ public:
 	{
 		if (IsValid() && registered_writer_)
 		{
-			shm_ptr_->writer_count--;
+			shm_ptr_->writer_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
 			registered_writer_ = false;
 		}
 	}
@@ -367,7 +365,7 @@ public:
 	 * \brief Get the number of reader instances connected to the Shared Memory
 	 * \return The number of attached readers, as reported by the readers
 	 */
-	int GetReaderCount() { return IsValid() ? shm_ptr_->reader_count.load() : 0; }
+	int GetReaderCount() { return IsValid() ? std::bitset<64>(shm_ptr_->reader_mask.load()).count() : 0; }
 	/**
 	 * \brief Gets the highest buffer number either written or read by this SharedMemoryManager
 	 * \return The highest buffer id written or read by this SharedMemoryManager
@@ -464,13 +462,18 @@ private:
 		size_t next_sequence_id;
 		bool destructive_read_mode;
 
-		std::atomic<int> writer_count;
-		std::atomic<int> reader_count;
+		std::atomic<uint64_t> writer_mask;
+		std::atomic<uint64_t> reader_mask;
 
 		std::atomic<int> next_id;
 		int rank;
 		unsigned ready_magic;
 	};
+
+	/**
+	 *\brief Determine if the buffer is stale, and should be read by any available reader or reset
+	 */
+	bool isBufferStale_(ShmBuffer* buffer);
 
 	inline uint8_t* dataStart_() const
 	{
