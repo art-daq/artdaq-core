@@ -17,7 +17,7 @@ cmake_minimum_required (VERSION 3.19 FATAL_ERROR)
 
 find_package(cetmodules 3.16.00 REQUIRED)
 
-project(artdaq-core VERSION 4.00.00 LANGUAGES CXX C)
+project(artdaq-core VERSION 4.01.00 LANGUAGES CXX C)
 
 include(CetCMakeEnv)
 cet_cmake_env()
