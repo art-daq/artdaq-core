@@ -951,7 +951,7 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		return true;
 	}
 
-	if (semaphore.id != manager_id_ && semaphore.flags == BufferSemaphoreFlags::Reading)
+	if (semaphore.id != manager_id_ && semaphore.flags == BufferSemaphoreFlags::Reading && manager_id_ == 0)
 	{
 		// Ron wants to re-check for potential interleave of buffer state updates
 		size_t delta = TimeUtils::gettimeofday_us() - shmBuf->last_touch_time;
@@ -961,7 +961,7 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		}
 		TLOG(TLVL_WARNING) << "Stale Read buffer " << buffer << " at " << static_cast<void*>(shmBuf)
 		                   << " ( " << delta << " / " << shm_ptr_->buffer_timeout_us << " us ) detected! (seqid="
-		                   << shmBuf->sequence_id << ") Resetting... Reading-->Full";
+		                   << shmBuf->sequence_id << ", owner=" << semaphore.id << ") Resetting... Reading-->Full";
 		shmBuf->readPos = 0;
 		ShmBufferSem release(BufferSemaphoreFlags::Full, -1);
 		auto check = shmBuf->semaphore.compare_exchange_strong(semaphore, release);
