@@ -306,6 +306,31 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 		auto rp = reader_pos_.load();
 		auto reader_count = GetReaderCount();
 
+		bool my_next_seq_id_available = false;
+		if (last_seen_id_ > 0 && shm_ptr_->destructive_read_mode)
+		{
+			for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+			{
+				buffer_num = (ii + rp) % shm_ptr_->buffer_count;
+
+				// TLOG(TLVL_GETBUFFER + 1) << "Checking if buffer " << buffer_num << " is stale. Shm destructive_read_mode=" << shm_ptr_->destructive_read_mode;
+				ResetBuffer(buffer_num);
+
+				auto buf = getBufferInfo_(buffer_num);
+				if (buf == nullptr)
+				{
+					continue;
+				}
+
+				auto sequence_id = buf->sequence_id.load();
+				if (sequence_id == last_seen_id_ + reader_count)
+				{
+					my_next_seq_id_available = true;
+					break;
+				}
+			}
+		}
+
 		for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 		{
 			buffer_num = (ii + rp) % shm_ptr_->buffer_count;
@@ -322,7 +347,38 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 			semaphore = buf->semaphore.load();
 			auto sequence_id = buf->sequence_id.load();
 
-			if (semaphore.flags == BufferSemaphoreFlags::Full && (semaphore.id == -1 || semaphore.id == manager_id_) && (shm_ptr_->destructive_read_mode || sequence_id > last_seen_id_))
+			if (my_next_seq_id_available)
+			{
+				if (sequence_id == last_seen_id_ + reader_count)
+				{
+					buffer_ptr = buf;
+					ShmBufferSem claim(BufferSemaphoreFlags::Reading, manager_id_);
+					if (!buffer_ptr->semaphore.compare_exchange_strong(semaphore, claim))
+					{
+						continue;
+					}
+					if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
+					{
+						TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was changing sem)";
+						continue;
+					}
+					buffer_ptr->readPos = 0;
+					touchBuffer_(buffer_ptr);
+					if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
+					{
+						TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was touching buffer SHOULD NOT HAPPEN!)";
+						continue;
+					}
+					if (sequence_id > last_seen_id_)
+					{
+						last_seen_id_ = sequence_id;
+					}
+
+					TLOG(TLVL_GETBUFFER) << "Returning " << buffer_num;
+					return buffer_num;
+				}
+			}
+			else if (semaphore.flags == BufferSemaphoreFlags::Full && (semaphore.id == -1 || semaphore.id == manager_id_) && (shm_ptr_->destructive_read_mode || sequence_id > last_seen_id_))
 			{
 				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
 				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_ << ", reader_count=" << reader_count;
