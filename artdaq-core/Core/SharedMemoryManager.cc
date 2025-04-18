@@ -349,7 +349,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 
 			if (my_next_seq_id_available)
 			{
-				if (sequence_id == last_seen_id_ + reader_count)
+				if (sequence_id == last_seen_id_ + reader_count && semaphore.flags == BufferSemaphoreFlags::Full)
 				{
 					buffer_ptr = buf;
 					ShmBufferSem claim(BufferSemaphoreFlags::Reading, manager_id_);
