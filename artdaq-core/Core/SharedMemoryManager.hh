@@ -454,8 +454,6 @@ private:
 
 	struct ShmStruct
 	{
-		std::atomic<unsigned int> reader_pos;
-		std::atomic<unsigned int> writer_pos;
 		int buffer_count;
 		size_t buffer_size;
 		size_t buffer_timeout_us;
@@ -508,6 +506,8 @@ private:
 	std::vector<ShmBuffer*> buffer_ptrs_;
 
 	std::atomic<size_t> last_seen_id_;
+	std::atomic<unsigned int> reader_pos_;
+	std::atomic<unsigned int> writer_pos_;
 	bool registered_reader_{false};
 	bool registered_writer_{false};
 	size_t min_write_size_;
