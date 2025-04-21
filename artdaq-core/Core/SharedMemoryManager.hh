@@ -494,6 +494,7 @@ private:
 			Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
 		return buffer_ptrs_[buffer];
 	}
+	bool claimBufferForReading_(ShmBufferSem semaphore, ShmBuffer* buffer_ptr, int buffer_num);
 	bool checkBuffer_(ShmBuffer* buffer, BufferSemaphoreFlags flags, bool exceptions = true);
 	void touchBuffer_(ShmBuffer* buffer);
 
