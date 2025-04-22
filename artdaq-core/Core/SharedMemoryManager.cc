@@ -317,6 +317,8 @@ bool artdaq::SharedMemoryManager::claimBufferForReading_(ShmBufferSem semaphore,
 		TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was touching buffer SHOULD NOT HAPPEN!)";
 		return false;
 	}
+
+	TLOG(TLVL_GETBUFFER + 2) << "Claimed buffer " << buffer_num << " with sequence id " << sequence_id << " (last seen=" << last_seen_id_ << ")";
 	if (sequence_id > last_seen_id_)
 	{
 		last_seen_id_ = sequence_id;
