@@ -363,8 +363,8 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 			{
 				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
 				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_ << ", reader_count=" << reader_count;
-				// Claim the buffer if it is in my sequence, I haven't claimed buffers before, or if we are in Broadcast mode
-				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + reader_count < last_seen_id_ || isBufferStale_(buf))
+				// Claim the buffer if I haven't claimed buffers before, if we are in Broadcast mode, it is in my sequence, or it is from a previous RR iteration
+				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + reader_count < last_seen_id_ )
 				{
 					if (sequence_id == last_seen_id_ + reader_count)
 					{
@@ -382,15 +382,18 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 			}
 		}
 
+		TLOG(TLVL_GETBUFFER + 1) << "Round-Robin exact match not found. Picking from " << potential_buffers.size() << " potential buffers";
 		if (potential_buffers.size() > 0)
 		{
-			for (auto& buf_pair : potential_buffers)
+			for (auto&& [seqID, buf_pair] : potential_buffers)
 			{
-				auto buf = getBufferInfo_(buf_pair.second.first);
-				if (buf != nullptr && claimBufferForReading_(buf_pair.second.second, buf, buf_pair.second.first))
+				auto&& [buf_num, semaphore] = buf_pair;
+				TLOG(TLVL_GETBUFFER + 1) << "Attempting to claim buffer " << buf_num << " with sequence_id " << seqID;
+				auto buf = getBufferInfo_(buf_num);
+				if (buf != nullptr && claimBufferForReading_(semaphore, buf, buf_num))
 				{
-					TLOG(TLVL_GETBUFFER) << "Returning " << buf_pair.second.first;
-					return buf_pair.second.first;
+					TLOG(TLVL_GETBUFFER) << "Returning " << buf_num;
+					return buf_num;
 				}
 			}
 		}
