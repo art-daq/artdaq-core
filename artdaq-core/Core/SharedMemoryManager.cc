@@ -364,7 +364,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
 				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_ << ", reader_count=" << reader_count;
 				// Claim the buffer if I haven't claimed buffers before, if we are in Broadcast mode, it is in my sequence, or it is from a previous RR iteration
-				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + (3 * reader_count) < last_seen_id_)
+				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + (rr_catch_up_factor_ * reader_count) < last_seen_id_)
 				{
 					potential_buffers[sequence_id] = std::make_pair(buffer_num, semaphore);
 				}

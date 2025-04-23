@@ -426,6 +426,8 @@ public:
 		return ss.str();
 	}
 
+	static size_t GetCatchUpFactor() { return rr_catch_up_factor_; }
+
 private:
 	SharedMemoryManager(SharedMemoryManager const&) = delete;
 	SharedMemoryManager(SharedMemoryManager&&) = delete;
@@ -512,6 +514,7 @@ private:
 	bool registered_reader_{false};
 	bool registered_writer_{false};
 	size_t min_write_size_;
+	static constexpr size_t rr_catch_up_factor_ = 3;
 };
 
 }  // namespace artdaq
