@@ -3,6 +3,7 @@
 #include <sys/shm.h>
 #include <cstring>
 #include <list>
+#include <map>
 #include <unordered_map>
 #ifndef SHM_DEST  // Lynn reports that this is missing on Mac OS X?!?
 #define SHM_DEST 01000
@@ -73,6 +74,8 @@ artdaq::SharedMemoryManager::SharedMemoryManager(uint32_t shm_key, size_t buffer
     , shm_key_(shm_key)
     , manager_id_(-1)
     , last_seen_id_(0)
+    , reader_pos_(0)
+    , writer_pos_(0)
 {
 	requested_shm_parameters_.buffer_count = buffer_count;
 	requested_shm_parameters_.buffer_size = buffer_size;
@@ -229,8 +232,6 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 				TLOG(TLVL_ATTACH) << "Owner initializing Shared Memory";
 				shm_ptr_->next_id = 1;
 				shm_ptr_->next_sequence_id = 0;
-				shm_ptr_->reader_pos = 0;
-				shm_ptr_->writer_pos = 0;
 				shm_ptr_->buffer_size = requested_shm_parameters_.buffer_size;
 				shm_ptr_->buffer_count = requested_shm_parameters_.buffer_count;
 				shm_ptr_->buffer_timeout_us = requested_shm_parameters_.buffer_timeout_us;
@@ -291,6 +292,41 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 	return false;
 }
 
+bool artdaq::SharedMemoryManager::claimBufferForReading_(ShmBufferSem semaphore, ShmBuffer* buffer_ptr, int buffer_num)
+{
+	if (buffer_ptr == nullptr)
+	{
+		return false;
+	}
+
+	ShmBufferSem claim(BufferSemaphoreFlags::Reading, manager_id_);
+	auto sequence_id = buffer_ptr->sequence_id.load();
+	if (!buffer_ptr->semaphore.compare_exchange_strong(semaphore, claim))
+	{
+		return false;
+	}
+	if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
+	{
+		TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was changing sem)";
+		return false;
+	}
+	buffer_ptr->readPos = 0;
+	touchBuffer_(buffer_ptr);
+	if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
+	{
+		TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was touching buffer SHOULD NOT HAPPEN!)";
+		return false;
+	}
+
+	TLOG(TLVL_GETBUFFER + 2) << "Claimed buffer " << buffer_num << " with sequence id " << sequence_id << " (last seen=" << last_seen_id_ << ")";
+	if (sequence_id > last_seen_id_)
+	{
+		last_seen_id_ = sequence_id;
+	}
+
+	return true;
+}
+
 int artdaq::SharedMemoryManager::GetBufferForReading()
 {
 	TLOG(TLVL_GETBUFFER) << "GetBufferForReading BEGIN";
@@ -302,9 +338,10 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 	{
 		ShmBufferSem semaphore;
 		int buffer_num = -1;
-		ShmBuffer* buffer_ptr = nullptr;
-		auto rp = shm_ptr_->reader_pos.load();
+		auto rp = reader_pos_.load();
 		auto reader_count = GetReaderCount();
+
+		std::map<size_t, std::pair<int, ShmBufferSem>> potential_buffers;
 
 		for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 		{
@@ -326,38 +363,28 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 			{
 				TLOG(TLVL_GETBUFFER + 1) << "ID " << manager_id_ << " Buffer " << buffer_num << ": sem=" << FlagToString(semaphore.flags)
 				                         << " (looking for " << FlagToString(BufferSemaphoreFlags::Full) << "), sem_id=" << semaphore.id << ", seq_id=" << sequence_id << ", last_seen_id_=" << last_seen_id_ << ", reader_count=" << reader_count;
-				// Claim the buffer if it is in my sequence, I haven't claimed buffers before, or if we are in Broadcast mode
-				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || isBufferStale_(buf))
+				// Claim the buffer if I haven't claimed buffers before, if we are in Broadcast mode, it is in my sequence, or it is from a previous RR iteration
+				if (last_seen_id_ == 0 || !shm_ptr_->destructive_read_mode || sequence_id % reader_count == last_seen_id_ % reader_count || sequence_id + (rr_catch_up_factor_ * reader_count) < last_seen_id_)
 				{
-					buffer_ptr = buf;
-					ShmBufferSem claim(BufferSemaphoreFlags::Reading, manager_id_);
-					if (!buffer_ptr->semaphore.compare_exchange_strong(semaphore, claim))
-					{
-						continue;
-					}
-					if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
-					{
-						TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was changing sem)";
-						continue;
-					}
-					buffer_ptr->readPos = 0;
-					touchBuffer_(buffer_ptr);
-					if (!checkBuffer_(buffer_ptr, BufferSemaphoreFlags::Reading, false))
-					{
-						TLOG(TLVL_GETBUFFER) << "Failed to acquire buffer " << buffer_num << " (someone else changed manager ID while I was touching buffer SHOULD NOT HAPPEN!)";
-						continue;
-					}
-					last_seen_id_ = sequence_id;
-
-					TLOG(TLVL_GETBUFFER) << "Returning " << buffer_num;
-					return buffer_num;
+					potential_buffers[sequence_id] = std::make_pair(buffer_num, semaphore);
 				}
 			}
 		}
 
-		if (buffer_ptr == nullptr)
+		TLOG(TLVL_GETBUFFER + 1) << "Picking from " << potential_buffers.size() << " potential buffers";
+		if (potential_buffers.size() > 0)
 		{
-			continue;
+			for (auto&& [seqID, buf_pair] : potential_buffers)
+			{
+				auto&& [buf_num, semaphore] = buf_pair;
+				TLOG(TLVL_GETBUFFER + 1) << "Attempting to claim buffer " << buf_num << " with sequence_id " << seqID;
+				auto buf = getBufferInfo_(buf_num);
+				if (buf != nullptr && claimBufferForReading_(semaphore, buf, buf_num))
+				{
+					TLOG(TLVL_GETBUFFER) << "Returning " << buf_num;
+					return buf_num;
+				}
+			}
 		}
 	}
 
@@ -371,7 +398,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 
 	RegisterWriter();
 
-	auto wp = shm_ptr_->writer_pos.load();
+	auto wp = writer_pos_.load();
 
 	TLOG(TLVL_GETBUFFER) << "GetBufferForWriting scanning " << shm_ptr_->buffer_count << " buffers";
 
@@ -402,7 +429,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 			{
 				continue;
 			}
-			shm_ptr_->writer_pos = (buffer + 1) % shm_ptr_->buffer_count;
+			writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
 			buf->sequence_id = ++shm_ptr_->next_sequence_id;
 			buf->writePos = 0;
 			if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
@@ -444,7 +471,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 				{
 					continue;
 				}
-				shm_ptr_->writer_pos = (buffer + 1) % shm_ptr_->buffer_count;
+				writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
 				buf->sequence_id = ++shm_ptr_->next_sequence_id;
 				buf->writePos = 0;
 				if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
@@ -484,7 +511,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 				{
 					continue;
 				}
-				shm_ptr_->writer_pos = (buffer + 1) % shm_ptr_->buffer_count;
+				writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
 				buf->sequence_id = ++shm_ptr_->next_sequence_id;
 				buf->writePos = 0;
 				if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
@@ -582,7 +609,7 @@ bool artdaq::SharedMemoryManager::ReadyForRead()
 
 	TLOG(TLVL_READREADY) << std::hex << std::showbase << shm_key_ << " ReadyForRead BEGIN" << std::dec;
 
-	auto rp = shm_ptr_->reader_pos.load();
+	auto rp = reader_pos_.load();
 
 	TLOG(TLVL_READREADY) << "ReadyForRead scanning " << shm_ptr_->buffer_count << " buffers";
 
@@ -625,7 +652,7 @@ bool artdaq::SharedMemoryManager::ReadyForWrite(bool overwrite)
 	}
 	TLOG(TLVL_WRITEREADY) << std::hex << std::showbase << shm_key_ << " ReadyForWrite BEGIN" << std::dec;
 
-	auto wp = shm_ptr_->writer_pos.load();
+	auto wp = writer_pos_.load();
 
 	TLOG(TLVL_WRITEREADY) << "ReadyForWrite scanning " << shm_ptr_->buffer_count << " buffers";
 
@@ -875,10 +902,10 @@ void artdaq::SharedMemoryManager::MarkBufferEmpty(int buffer, bool force, bool d
 		TLOG(TLVL_POS + 3) << "MarkBufferEmpty Resetting buffer " << buffer << " (SeqID " << shmBuf->sequence_id << ") to Empty state";
 		shmBuf->writePos = 0;
 		release.flags = BufferSemaphoreFlags::Empty;
-		if (shm_ptr_->reader_pos == static_cast<unsigned>(buffer))
+		if (reader_pos_ == static_cast<unsigned>(buffer))
 		{
-			TLOG(TLVL_POS + 3) << "Incrementing reader_pos from " << shm_ptr_->reader_pos << " to " << (buffer + 1) % shm_ptr_->buffer_count;
-			shm_ptr_->reader_pos = (buffer + 1) % shm_ptr_->buffer_count;
+			TLOG(TLVL_POS + 3) << "Incrementing reader_pos_ from " << reader_pos_ << " to " << (buffer + 1) % shm_ptr_->buffer_count;
+			reader_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
 		}
 	}
 	else
@@ -944,14 +971,14 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		{
 			Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
 		}
-		if (shm_ptr_->reader_pos == static_cast<unsigned>(buffer))
+		if (reader_pos_ == static_cast<unsigned>(buffer))
 		{
-			shm_ptr_->reader_pos = (buffer + 1) % shm_ptr_->buffer_count;
+			reader_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
 		}
 		return true;
 	}
 
-	if (semaphore.id != manager_id_ && semaphore.flags == BufferSemaphoreFlags::Reading)
+	if (semaphore.id != manager_id_ && semaphore.flags == BufferSemaphoreFlags::Reading && manager_id_ == 0)
 	{
 		// Ron wants to re-check for potential interleave of buffer state updates
 		size_t delta = TimeUtils::gettimeofday_us() - shmBuf->last_touch_time;
@@ -961,7 +988,7 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		}
 		TLOG(TLVL_WARNING) << "Stale Read buffer " << buffer << " at " << static_cast<void*>(shmBuf)
 		                   << " ( " << delta << " / " << shm_ptr_->buffer_timeout_us << " us ) detected! (seqid="
-		                   << shmBuf->sequence_id << ") Resetting... Reading-->Full";
+		                   << shmBuf->sequence_id << ", owner=" << semaphore.id << ") Resetting... Reading-->Full";
 		shmBuf->readPos = 0;
 		ShmBufferSem release(BufferSemaphoreFlags::Full, -1);
 		auto check = shmBuf->semaphore.compare_exchange_strong(semaphore, release);
@@ -1092,8 +1119,6 @@ std::string artdaq::SharedMemoryManager::toString()
 	}
 	std::ostringstream ostr;
 	ostr << "ShmStruct: " << std::endl
-	     << "Reader Position: " << shm_ptr_->reader_pos << std::endl
-	     << "Writer Position: " << shm_ptr_->writer_pos << std::endl
 	     << "Next ID Number: " << shm_ptr_->next_id << std::endl
 	     << "Buffer Count: " << shm_ptr_->buffer_count << std::endl
 	     << "Buffer Size: " << std::to_string(shm_ptr_->buffer_size) << " bytes" << std::endl
