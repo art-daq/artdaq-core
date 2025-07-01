@@ -2,21 +2,6 @@ include(FindDoxygen)
 include(FindLATEX)
 
 SET(DOXYFILE_DIR ${CMAKE_CURRENT_LIST_DIR})
-function(create_pdf_documentation)
-	find_package(LATEX COMPONENTS PDFLATEX PS2PDF MAKEINDEX)
-	find_program(EPSTOPDF_FOUND epstopdf)
-
-	if(LATEX_FOUND AND EPSTOPDF_FOUND)
-		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/latex/${PROJECT_NAME}_API_Documentation.pdf
-		                   COMMAND make > pdflatex.log 2>&1 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/latex
-		                   COMMAND mv refman.pdf ${PROJECT_NAME}_API_Documentation.pdf
-		                   DEPENDS ${PROJECT_NAME}_doc
-		                   COMMENT "Generating ${PROJECT_NAME} PDF API Documentation file" VERBATIM)
-		add_custom_target(${PROJECT_NAME}_pdf ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/latex/${PROJECT_NAME}_API_Documentation.pdf)
-		install(FILES ${CMAKE_CURRENT_BINARY_DIR}/latex/${PROJECT_NAME}_API_Documentation.pdf DESTINATION ${CMAKE_INSTALL_DATADIR}/doc OPTIONAL)
-	endif(LATEX_FOUND AND EPSTOPDF_FOUND)
-endfunction()
-
 
 macro (create_doxygen_documentation)
 if(DOXYGEN_FOUND)
@@ -56,7 +41,6 @@ if(DOXYGEN_FOUND)
 	                   COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile > doxygen.log 2>&1 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 	                   COMMENT "Generating ${PROJECT_NAME} API documentation using Doxygen" VERBATIM)
 	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tag DESTINATION ${CMAKE_INSTALL_DATADIR}/doc)
-	create_pdf_documentation()
 
 	# install doxygen-generated HTML pages and MAN pages.
 	install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/${PROJECT_NAME})
