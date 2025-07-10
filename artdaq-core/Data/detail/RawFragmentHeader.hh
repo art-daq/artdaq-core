@@ -47,25 +47,25 @@ struct artdaq::detail::RawFragmentHeader
 	typedef uint64_t timestamp_t;           ///< timestamp field is 32 bits
 
 	// define special values for type_t
-	static constexpr type_t INVALID_TYPE = 0;                                    ///< Marks a Fragment as Invalid
-	static constexpr type_t FIRST_USER_TYPE = 1;                                 ///< The first user-accessible type
-	static constexpr type_t LAST_USER_TYPE = 224;                                ///< The last user-accessible type (types above this number are system types
-	static constexpr type_t FIRST_SYSTEM_TYPE = 225;                             ///< The first system type
-	static constexpr type_t LAST_SYSTEM_TYPE = 255;                              ///< The last system type
-	static constexpr type_t InvalidFragmentType = INVALID_TYPE;                  ///< Marks a Fragment as Invalid
-	static constexpr type_t EndOfDataFragmentType = FIRST_SYSTEM_TYPE;           ///< This Fragment indicates the end of data to _art_
-	static constexpr type_t DataFragmentType = FIRST_SYSTEM_TYPE + 1;            ///< This Fragment holds data. Used for RawEvent Fragments sent from the EventBuilder to the Aggregator
-	static constexpr type_t InitFragmentType = FIRST_SYSTEM_TYPE + 2;            ///< This Fragment holds the necessary data for initializing _art_
-	static constexpr type_t EndOfRunFragmentType = FIRST_SYSTEM_TYPE + 3;        ///< This Fragment indicates the end of a run to _art_
-	static constexpr type_t EndOfSubrunFragmentType = FIRST_SYSTEM_TYPE + 4;     ///< This Fragment indicates the end of a subrun to _art_
-	static constexpr type_t ShutdownFragmentType = FIRST_SYSTEM_TYPE + 5;        ///< This Fragment indicates a system shutdown to _art_
-	static constexpr type_t EmptyFragmentType = FIRST_SYSTEM_TYPE + 6;           ///< This Fragment contains no data and serves as a placeholder for when no data from a FragmentGenerator is expected
-	static constexpr type_t ContainerFragmentType = FIRST_SYSTEM_TYPE + 7;       ///< This Fragment is a ContainerFragment and analysis code should unpack it
-	static constexpr type_t ErrorFragmentType = FIRST_SYSTEM_TYPE + 8;           ///< This Fragment has experienced some error, and no attempt should be made to read it
-	//static constexpr type_t StartOfRunFragmentType = FIRST_SYSTEM_TYPE + 9;      ///< This Fragment contains start of run metadata
-	//static constexpr type_t StartOfSubrunFragmentType = FIRST_SYSTEM_TYPE + 10;  ///< This Fragment contains start of subrun metadata
-	static constexpr type_t RunDataFragmentType = FIRST_SYSTEM_TYPE + 11;        ///< This Fragment contains an art Run object
-	static constexpr type_t SubrunDataFragmentType = FIRST_SYSTEM_TYPE + 12;     ///< This Fragment contains an art Subrun object
+	static constexpr type_t INVALID_TYPE = 0;                                 ///< Marks a Fragment as Invalid
+	static constexpr type_t FIRST_USER_TYPE = 1;                              ///< The first user-accessible type
+	static constexpr type_t LAST_USER_TYPE = 224;                             ///< The last user-accessible type (types above this number are system types
+	static constexpr type_t FIRST_SYSTEM_TYPE = 225;                          ///< The first system type
+	static constexpr type_t LAST_SYSTEM_TYPE = 255;                           ///< The last system type
+	static constexpr type_t InvalidFragmentType = INVALID_TYPE;               ///< Marks a Fragment as Invalid
+	static constexpr type_t EndOfDataFragmentType = FIRST_SYSTEM_TYPE;        ///< This Fragment indicates the end of data to _art_
+	static constexpr type_t DataFragmentType = FIRST_SYSTEM_TYPE + 1;         ///< This Fragment holds data. Used for RawEvent Fragments sent from the EventBuilder to the Aggregator
+	static constexpr type_t InitFragmentType = FIRST_SYSTEM_TYPE + 2;         ///< This Fragment holds the necessary data for initializing _art_
+	static constexpr type_t EndOfRunFragmentType = FIRST_SYSTEM_TYPE + 3;     ///< This Fragment indicates the end of a run to _art_
+	static constexpr type_t EndOfSubrunFragmentType = FIRST_SYSTEM_TYPE + 4;  ///< This Fragment indicates the end of a subrun to _art_
+	static constexpr type_t ShutdownFragmentType = FIRST_SYSTEM_TYPE + 5;     ///< This Fragment indicates a system shutdown to _art_
+	static constexpr type_t EmptyFragmentType = FIRST_SYSTEM_TYPE + 6;        ///< This Fragment contains no data and serves as a placeholder for when no data from a FragmentGenerator is expected
+	static constexpr type_t ContainerFragmentType = FIRST_SYSTEM_TYPE + 7;    ///< This Fragment is a ContainerFragment and analysis code should unpack it
+	static constexpr type_t ErrorFragmentType = FIRST_SYSTEM_TYPE + 8;        ///< This Fragment has experienced some error, and no attempt should be made to read it
+	// static constexpr type_t StartOfRunFragmentType = FIRST_SYSTEM_TYPE + 9;      ///< This Fragment contains start of run metadata
+	// static constexpr type_t StartOfSubrunFragmentType = FIRST_SYSTEM_TYPE + 10;  ///< This Fragment contains start of subrun metadata
+	static constexpr type_t RunDataFragmentType = FIRST_SYSTEM_TYPE + 11;     ///< This Fragment contains an art Run object
+	static constexpr type_t SubrunDataFragmentType = FIRST_SYSTEM_TYPE + 12;  ///< This Fragment contains an art Subrun object
 
 	/**
 	 * \brief Returns a map of the most-commonly used system types
