@@ -62,8 +62,8 @@ struct artdaq::detail::RawFragmentHeader
 	static constexpr type_t EmptyFragmentType = FIRST_SYSTEM_TYPE + 6;           ///< This Fragment contains no data and serves as a placeholder for when no data from a FragmentGenerator is expected
 	static constexpr type_t ContainerFragmentType = FIRST_SYSTEM_TYPE + 7;       ///< This Fragment is a ContainerFragment and analysis code should unpack it
 	static constexpr type_t ErrorFragmentType = FIRST_SYSTEM_TYPE + 8;           ///< This Fragment has experienced some error, and no attempt should be made to read it
-	static constexpr type_t StartOfRunFragmentType = FIRST_SYSTEM_TYPE + 9;      ///< This Fragment contains start of run metadata
-	static constexpr type_t StartOfSubrunFragmentType = FIRST_SYSTEM_TYPE + 10;  ///< This Fragment contains start of subrun metadata
+	//static constexpr type_t StartOfRunFragmentType = FIRST_SYSTEM_TYPE + 9;      ///< This Fragment contains start of run metadata
+	//static constexpr type_t StartOfSubrunFragmentType = FIRST_SYSTEM_TYPE + 10;  ///< This Fragment contains start of subrun metadata
 	static constexpr type_t RunDataFragmentType = FIRST_SYSTEM_TYPE + 11;        ///< This Fragment contains an art Run object
 	static constexpr type_t SubrunDataFragmentType = FIRST_SYSTEM_TYPE + 12;     ///< This Fragment contains an art Subrun object
 
@@ -96,9 +96,7 @@ struct artdaq::detail::RawFragmentHeader
 		    {type_t(EndOfSubrunFragmentType), "EndOfSubrun"},
 		    {type_t(ShutdownFragmentType), "Shutdown"},
 		    {type_t(EmptyFragmentType), "Empty"},
-		    {type_t(ContainerFragmentType), "Container"},
-		    {type_t(StartOfRunFragmentType), "StartOfRun"},
-		    {type_t(StartOfSubrunFragmentType), "StartOfSubrun"}};
+		    {type_t(ContainerFragmentType), "Container"}};
 	}
 
 	/**

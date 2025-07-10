@@ -155,8 +155,6 @@ public:
 	static constexpr type_t EmptyFragmentType = detail::RawFragmentHeader::EmptyFragmentType;                  ///< Copy EmptyFragmentType from RawFragmentHeader
 	static constexpr type_t ContainerFragmentType = detail::RawFragmentHeader::ContainerFragmentType;          ///< Copy ContainerFragmentType from RawFragmentHeader
 	static constexpr type_t ErrorFragmentType = detail::RawFragmentHeader::ErrorFragmentType;                  ///< Copy ErrorFragmentType from RawFragmentHeader
-	static constexpr type_t StartOfRunFragmentType = detail::RawFragmentHeader::StartOfRunFragmentType;        ///< Copy StartOfRunFragmentType from RawFragmentHeader
-	static constexpr type_t StartOfSubrunFragmentType = detail::RawFragmentHeader::StartOfSubrunFragmentType;  ///< Copy StartOfSubrunFragmentType from RawFragmentHeader
 	static constexpr type_t RunDataFragmentType = detail::RawFragmentHeader::RunDataFragmentType;              ///< Copy RunDataFragmentType from RawFragmentHeader
 	static constexpr type_t SubrunDataFragmentType = detail::RawFragmentHeader::SubrunDataFragmentType;        ///< Copy SubrunDataFragmentType from RawFragmentHeader
 
@@ -834,8 +832,6 @@ inline bool constexpr artdaq::Fragment::isBroadcastFragmentType(type_t fragmentT
 			case EndOfRunFragmentType:
 			case EndOfSubrunFragmentType:
 			case ShutdownFragmentType:
-			case StartOfRunFragmentType:
-			case StartOfSubrunFragmentType:
 			case RunDataFragmentType:
 			case SubrunDataFragmentType:
 				return true;
