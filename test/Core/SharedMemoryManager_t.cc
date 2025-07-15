@@ -399,13 +399,14 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 				{
 					TLOG(TLVL_TRACE) << "Reader " << my_id << " read " << counter << " has buffer_seq " << buffer_seq << " != last_read_id " << last_read_id << " + reader_count " << reader_man.GetReaderCount();
 					ooo_counter++;
-                }
-                else {
+				}
+				else
+				{
 					TLOG(TLVL_TRACE) << "Reader " << my_id << " read " << counter << " has buffer_seq " << buffer_seq << " == last_read_id " << last_read_id << " + reader_count " << reader_man.GetReaderCount();
-                }
+				}
 				last_read_id = buffer_seq;
 			}
-            std::this_thread::yield();
+			std::this_thread::yield();
 		}
 		TLOG(TLVL_INFO) << "Reader " << my_id << " read " << counter << " buffers, " << ooo_counter << " of them were out of round-robin order, and " << misses_after_start << " times there was no data available";
 		reader_man.UnregisterReader();
