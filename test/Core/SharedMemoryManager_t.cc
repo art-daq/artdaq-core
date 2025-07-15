@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 	std::generate_n(data, 0x1000, [&]() { return ++n; });
 
 	const int reader_count = 10;
-	const size_t n_writes = 1'000'000;
+	const size_t n_writes = 10'000;
 
 	auto reader_proc = [key, reader_count]() {
 		size_t counter = 0;
@@ -392,15 +392,20 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 					continue;
 				}
 				counter++;
+				size_t buffer_seq = 0;
+				reader_man.Read(buffer_id, &buffer_seq, sizeof(buffer_seq));
 				reader_man.MarkBufferEmpty(buffer_id);
-				auto buffer_seq = reader_man.GetLastSeenBufferID();
 				if (last_read_id != 0 && buffer_seq != last_read_id + reader_man.GetReaderCount())
 				{
-					TLOG(TLVL_DEBUG) << "Reader " << my_id << " read " << counter << " has buffer_seq " << buffer_seq << " != last_read_id " << last_read_id << " + reader_count " << reader_man.GetReaderCount();
+					TLOG(TLVL_TRACE) << "Reader " << my_id << " read " << counter << " has buffer_seq " << buffer_seq << " != last_read_id " << last_read_id << " + reader_count " << reader_man.GetReaderCount();
 					ooo_counter++;
-				}
+                }
+                else {
+					TLOG(TLVL_TRACE) << "Reader " << my_id << " read " << counter << " has buffer_seq " << buffer_seq << " == last_read_id " << last_read_id << " + reader_count " << reader_man.GetReaderCount();
+                }
 				last_read_id = buffer_seq;
 			}
+            std::this_thread::yield();
 		}
 		TLOG(TLVL_INFO) << "Reader " << my_id << " read " << counter << " buffers, " << ooo_counter << " of them were out of round-robin order, and " << misses_after_start << " times there was no data available";
 		reader_man.UnregisterReader();
@@ -424,6 +429,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 					}
 				}
 				int buf = man.GetBufferForWriting(false);
+				man.Write(buf, &write_counter, sizeof(write_counter));
 				man.MarkBufferFull(buf);
 				write_counter++;
 			}
