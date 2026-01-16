@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(Construct)
 	BOOST_REQUIRE_EQUAL(f4->hasMetadata(), false);
 
 	// Verify that any type may be specified in the constructor
-    // Some system types
+	// Some system types
 	artdaq::Fragment frag1(101, 202, 0);
 	artdaq::Fragment frag2(101, 202, 225);
 	artdaq::Fragment frag3(101, 202, 255);
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(Construct)
 	artdaq::Fragment frag5(101, 202, artdaq::detail::RawFragmentHeader::FIRST_SYSTEM_TYPE);
 	artdaq::Fragment frag6(101, 202, artdaq::detail::RawFragmentHeader::LAST_SYSTEM_TYPE);
 
-    // Some user types
+	// Some user types
 	artdaq::Fragment
 	    fragA(101, 202, artdaq::detail::RawFragmentHeader::FIRST_USER_TYPE);
 	artdaq::Fragment

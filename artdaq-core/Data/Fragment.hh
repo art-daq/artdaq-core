@@ -725,7 +725,7 @@ public:
 	 */
 	static FragmentPtr dataFrag(sequence_id_t sequenceID,
 	                            fragment_id_t fragID,
-                                type_t type,
+	                            type_t type,
 	                            RawDataType const* dataPtr,
 	                            size_t dataSize,
 	                            timestamp_t timestamp = Fragment::InvalidTimestamp);

@@ -47,7 +47,7 @@ artdaq::Fragment::Fragment(sequence_id_t sequenceID,
 {
 	fragmentHeaderPtr()->version = RawFragmentHeader::CurrentVersion;
 	updateFragmentHeaderWC_();
-	
+
 	fragmentHeaderPtr()->type = type;
 	fragmentHeaderPtr()->sequence_id = sequenceID;
 	fragmentHeaderPtr()->fragment_id = fragID;
