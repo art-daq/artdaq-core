@@ -44,9 +44,9 @@ BOOST_AUTO_TEST_CASE(AddFragment_Ptr)
 	artdaq::FragmentPtr
 	    tmpFrag(artdaq::Fragment::dataFrag(1,
 	                                       0,
-	                                       fakeData.begin(),
-	                                       fakeData.end()));
-	tmpFrag->setUserType(artdaq::Fragment::FirstUserFragmentType);
+	                                       artdaq::Fragment::FirstUserFragmentType,
+	                                       fakeData.data(),
+	                                       fakeData.size()));
 
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
@@ -75,9 +75,9 @@ BOOST_AUTO_TEST_CASE(AddFragment_Ref)
 	artdaq::FragmentPtr
 	    tmpFrag(artdaq::Fragment::dataFrag(1,
 	                                       0,
-	                                       fakeData.begin(),
-	                                       fakeData.end()));
-	tmpFrag->setUserType(artdaq::Fragment::FirstUserFragmentType);
+	                                       artdaq::Fragment::FirstUserFragmentType,
+	                                       fakeData.data(),
+	                                       fakeData.size()));
 	auto frag = *tmpFrag.get();
 
 	artdaq::Fragment f(0);
@@ -108,15 +108,15 @@ BOOST_AUTO_TEST_CASE(AddFragments)
 	artdaq::FragmentPtr
 	    tmpFrag1(artdaq::Fragment::dataFrag(1,
 	                                        0,
-	                                        fakeData1.begin(),
-	                                        fakeData1.end()));
-	tmpFrag1->setUserType(artdaq::Fragment::FirstUserFragmentType);
+	                                        artdaq::Fragment::FirstUserFragmentType,
+	                                        fakeData1.data(),
+	                                        fakeData1.size()));
 	artdaq::FragmentPtr
 	    tmpFrag2(artdaq::Fragment::dataFrag(1,
 	                                        1,
-	                                        fakeData2.begin(),
-	                                        fakeData2.end()));
-	tmpFrag2->setUserType(artdaq::Fragment::FirstUserFragmentType);
+	                                        artdaq::Fragment::FirstUserFragmentType,
+	                                        fakeData2.data(),
+	                                        fakeData2.size()));
 	artdaq::FragmentPtrs frags;
 	frags.push_back(std::move(tmpFrag1));
 	frags.push_back(std::move(tmpFrag2));
@@ -157,9 +157,9 @@ BOOST_AUTO_TEST_CASE(Performance)
 		artdaq::FragmentPtr
 		    tmpFrag1(artdaq::Fragment::dataFrag(1,
 		                                        ii,
-		                                        fakeData1.begin(),
-		                                        fakeData1.end()));
-		tmpFrag1->setUserType(artdaq::Fragment::FirstUserFragmentType);
+		                                        artdaq::Fragment::FirstUserFragmentType,
+		                                        fakeData1.data(),
+		                                        fakeData1.size()));
 		frags.push_back(std::move(tmpFrag1));
 	}
 
@@ -231,8 +231,7 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 
 	artdaq::FragmentPtrs ff1;
 	ff1.emplace_back(new artdaq::Fragment(101, 202, artdaq::Fragment::DataFragmentType));
-	ff1.emplace_back(new artdaq::Fragment(102, 203));
-	ff1.back()->setSystemType(artdaq::Fragment::EmptyFragmentType);
+	ff1.emplace_back(new artdaq::Fragment(102, 203, artdaq::Fragment::EmptyFragmentType));
 	BOOST_REQUIRE_EXCEPTION(cfl3.addFragments(ff1), cet::exception, [&](cet::exception e) { return e.category() == "WrongFragmentType"; });
 }
 
@@ -250,9 +249,9 @@ BOOST_AUTO_TEST_CASE(Upgrade)
 	artdaq::FragmentPtr
 	    tmpFrag(artdaq::Fragment::dataFrag(1,
 	                                       0,
-	                                       fakeData.begin(),
-	                                       fakeData.end()));
-	tmpFrag->setUserType(artdaq::Fragment::FirstUserFragmentType);
+	                                       artdaq::Fragment::FirstUserFragmentType,
+	                                       fakeData.data(),
+	                                       fakeData.size()));
 	memcpy(f.dataBegin(), tmpFrag->headerAddress(), tmpFrag->sizeBytes());
 
 	artdaq::ContainerFragment cf(f);
@@ -273,9 +272,9 @@ BOOST_AUTO_TEST_CASE(AppendFragment)
 	artdaq::FragmentPtr
 	    tmpFrag(artdaq::Fragment::dataFrag(1,
 	                                       0,
-	                                       fakeData.begin(),
-	                                       fakeData.end()));
-	tmpFrag->setUserType(artdaq::Fragment::FirstUserFragmentType);
+	                                       artdaq::Fragment::FirstUserFragmentType,
+	                                       fakeData.data(),
+	                                       fakeData.size()));
 
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
@@ -320,9 +319,9 @@ BOOST_AUTO_TEST_CASE(ResizeLastFragment)
 	artdaq::FragmentPtr
 	    tmpFrag(artdaq::Fragment::dataFrag(1,
 	                                       0,
-	                                       fakeData.begin(),
-	                                       fakeData.end()));
-	tmpFrag->setUserType(artdaq::Fragment::FirstUserFragmentType);
+	                                       artdaq::Fragment::FirstUserFragmentType,
+	                                       fakeData.data(),
+	                                       fakeData.size()));
 
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);

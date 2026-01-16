@@ -47,16 +47,8 @@ artdaq::Fragment::Fragment(sequence_id_t sequenceID,
 {
 	fragmentHeaderPtr()->version = RawFragmentHeader::CurrentVersion;
 	updateFragmentHeaderWC_();
-	if (type == Fragment::DataFragmentType)
-	{
-		// this value is special because it is the default specified
-		// in the constructor declaration
-		fragmentHeaderPtr()->setSystemType(type);
-	}
-	else
-	{
-		fragmentHeaderPtr()->setUserType(type);
-	}
+	
+	fragmentHeaderPtr()->type = type;
 	fragmentHeaderPtr()->sequence_id = sequenceID;
 	fragmentHeaderPtr()->fragment_id = fragID;
 	fragmentHeaderPtr()->timestamp = timestamp;
@@ -87,11 +79,12 @@ artdaq::FragmentPtr
 artdaq::Fragment::
     dataFrag(sequence_id_t sequenceID,
              fragment_id_t fragID,
+             type_t type,
              RawDataType const* dataPtr,
              size_t dataSize,
              timestamp_t timestamp)
 {
-	FragmentPtr result(new Fragment(sequenceID, fragID, Fragment::DataFragmentType, timestamp));
+	FragmentPtr result(new Fragment(sequenceID, fragID, type, timestamp));
 	result->resize(dataSize);
 	memcpy(result->dataAddress(), dataPtr, (dataSize * sizeof(RawDataType)));
 	return result;

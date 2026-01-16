@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(Construct)
 	BOOST_REQUIRE(f2.fragmentID() == artdaq::Fragment::InvalidFragmentID);
 	BOOST_REQUIRE_EQUAL(f2.hasMetadata(), false);
 
-	artdaq::Fragment f3(101, 202);
+	artdaq::Fragment f3(101, 202, artdaq ::Fragment::DataFragmentType);
 	BOOST_REQUIRE_EQUAL(f3.dataSize(), (size_t)0);
 	BOOST_REQUIRE_EQUAL(f3.size(), (size_t)artdaq::detail::RawFragmentHeader::num_words());
 	BOOST_REQUIRE_EQUAL(f3.version(), (artdaq::Fragment::version_t)artdaq::detail::RawFragmentHeader::CurrentVersion);
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(Construct)
 	BOOST_REQUIRE_EQUAL(f3.hasMetadata(), false);
 
 	std::vector<artdaq::RawDataType> d{1, 2, 3};
-	auto f4 = artdaq::Fragment::dataFrag(101, 202, &d[0], 3);
+	auto f4 = artdaq::Fragment::dataFrag(101, 202, artdaq::Fragment::DataFragmentType, &d[0], 3);
 	BOOST_REQUIRE_EQUAL(f4->dataSize(), (size_t)3);
 	BOOST_REQUIRE_EQUAL(f4->size(), (size_t)artdaq::detail::RawFragmentHeader::num_words() + 3);
 	BOOST_REQUIRE_EQUAL(f4->version(), (artdaq::Fragment::version_t)artdaq::detail::RawFragmentHeader::CurrentVersion);
@@ -78,15 +78,16 @@ BOOST_AUTO_TEST_CASE(Construct)
 	BOOST_REQUIRE_EQUAL(f4->fragmentID(), (artdaq::Fragment::fragment_id_t)202);
 	BOOST_REQUIRE_EQUAL(f4->hasMetadata(), false);
 
-	// Verify that only "user" fragment types may be specified
-	// in the constructor
-	BOOST_REQUIRE_THROW(artdaq::Fragment frag(101, 202, 0), cet::exception);
-	BOOST_REQUIRE_THROW(artdaq::Fragment frag(101, 202, 225), cet::exception);
-	BOOST_REQUIRE_THROW(artdaq::Fragment frag(101, 202, 255), cet::exception);
-	BOOST_REQUIRE_THROW(artdaq::Fragment frag(101, 202, artdaq::Fragment::InvalidFragmentType), cet::exception);
-	BOOST_REQUIRE_THROW(artdaq::Fragment frag(101, 202, artdaq::detail::RawFragmentHeader::FIRST_SYSTEM_TYPE), cet::exception);
-	BOOST_REQUIRE_THROW(artdaq::Fragment frag(101, 202, artdaq::detail::RawFragmentHeader::LAST_SYSTEM_TYPE), cet::exception);
+	// Verify that any type may be specified in the constructor
+    // Some system types
+	artdaq::Fragment frag1(101, 202, 0);
+	artdaq::Fragment frag2(101, 202, 225);
+	artdaq::Fragment frag3(101, 202, 255);
+	artdaq::Fragment frag4(101, 202, artdaq::Fragment::InvalidFragmentType);
+	artdaq::Fragment frag5(101, 202, artdaq::detail::RawFragmentHeader::FIRST_SYSTEM_TYPE);
+	artdaq::Fragment frag6(101, 202, artdaq::detail::RawFragmentHeader::LAST_SYSTEM_TYPE);
 
+    // Some user types
 	artdaq::Fragment
 	    fragA(101, 202, artdaq::detail::RawFragmentHeader::FIRST_USER_TYPE);
 	artdaq::Fragment
@@ -157,10 +158,10 @@ BOOST_AUTO_TEST_CASE(SequenceID)
 	f1.setSequenceID(0x0000ffffffffffff);
 	BOOST_REQUIRE_EQUAL(f1.sequenceID(), (uint64_t)0x0000ffffffffffff);
 
-	artdaq::Fragment f2(0x12345, 0xab);
+	artdaq::Fragment f2(0x12345, 0xab, artdaq::Fragment::DataFragmentType);
 	BOOST_REQUIRE_EQUAL(f2.sequenceID(), (uint64_t)0x12345);
 
-	artdaq::Fragment f3(0x0000567812345678, 0xab);
+	artdaq::Fragment f3(0x0000567812345678, 0xab, artdaq::Fragment::DataFragmentType);
 	BOOST_REQUIRE_EQUAL(f3.sequenceID(), (uint64_t)0x0000567812345678);
 }
 
@@ -174,10 +175,10 @@ BOOST_AUTO_TEST_CASE(FragmentID)
 	f1.setFragmentID(0xffff);
 	BOOST_REQUIRE_EQUAL(f1.fragmentID(), (uint16_t)0xffff);
 
-	artdaq::Fragment f2(0x12345, 0xab);
+	artdaq::Fragment f2(0x12345, 0xab, artdaq::Fragment::DataFragmentType);
 	BOOST_REQUIRE_EQUAL(f2.fragmentID(), (uint16_t)0xab);
 
-	artdaq::Fragment f3(0x0000567812345678, 0xffff);
+	artdaq::Fragment f3(0x0000567812345678, 0xffff, artdaq::Fragment::DataFragmentType);
 	BOOST_REQUIRE_EQUAL(f3.fragmentID(), (uint16_t)0xffff);
 }
 
