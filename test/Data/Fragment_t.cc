@@ -9,9 +9,9 @@
  */
 struct MetadataTypeOne
 {
-	uint64_t field1;  ///< 1. A 64-bit field
-	uint32_t field2;  ///< 2. A 32-bit field
-	uint32_t field3;  ///< 3. A 32-bit field
+	uint64_t field1{0};  ///< 1. A 64-bit field
+	uint32_t field2{0};  ///< 2. A 32-bit field
+	uint32_t field3{0};  ///< 3. A 32-bit field
 };
 
 /**
@@ -19,11 +19,11 @@ struct MetadataTypeOne
  */
 struct MetadataTypeTwo
 {
-	uint64_t field1;  ///< 1. A 64-bit field
-	uint32_t field2;  ///< 2. A 32-bit field
-	uint32_t field3;  ///< 3. A 32-bit field
-	uint64_t field4;  ///< 4. A 64-bit field
-	uint16_t field5;  ///< 5. A 16-bit field
+	uint64_t field1{0};  ///< 1. A 64-bit field
+	uint32_t field2{0};  ///< 2. A 32-bit field
+	uint32_t field3{0};  ///< 3. A 32-bit field
+	uint64_t field4{0};  ///< 4. A 64-bit field
+	uint16_t field5{0};  ///< 5. A 16-bit field
 };
 
 /**
