@@ -272,7 +272,7 @@ public:
 	 */
 	Fragment(sequence_id_t sequenceID,
 	         fragment_id_t fragID,
-	         type_t type = Fragment::DataFragmentType,
+	         type_t type,
 	         timestamp_t timestamp = Fragment::InvalidTimestamp);
 
 	/**
@@ -715,30 +715,6 @@ public:
 	static FragmentPtr eodFrag(size_t nFragsToExpect);
 
 	/**
-	 * \brief Creates a Fragment, copying data from given location.
-	 * 12-Apr-2013, KAB - this method is deprecated, please do not use (internal use only)
-	 * \tparam InputIterator Type of input iterator
-	 * \param sequenceID Sequence ID of new Fragment
-	 * \param fragID Fragment ID of new Fragment
-	 * \param i Beginning of input range
-	 * \param e End of input range
-	 * \return FragmentPtr to created Fragment
-	 * \todo Change function access specifier to restrict access
-	 */
-	template<class InputIterator>
-	static FragmentPtr dataFrag(sequence_id_t sequenceID,
-	                            fragment_id_t fragID,
-	                            InputIterator i,
-	                            InputIterator e)
-	{
-		FragmentPtr result(new Fragment(sequenceID, fragID));
-		result->vals_.reserve(std::distance(i, e) + detail::RawFragmentHeader::num_words());
-		std::copy(i, e, std::back_inserter(result->vals_));
-		result->updateFragmentHeaderWC_();
-		return result;
-	}
-
-	/**
 	 * \brief Crates a Fragment, copying data from given location.
 	 * \param sequenceID Sequence ID of new Fragment
 	 * \param fragID Fragment ID of new Fragment
@@ -749,6 +725,7 @@ public:
 	 */
 	static FragmentPtr dataFrag(sequence_id_t sequenceID,
 	                            fragment_id_t fragID,
+	                            type_t type,
 	                            RawDataType const* dataPtr,
 	                            size_t dataSize,
 	                            timestamp_t timestamp = Fragment::InvalidTimestamp);

@@ -49,9 +49,9 @@ BOOST_AUTO_TEST_CASE(InsertFragment)
 	// fragments with different sequence IDs into a single RawEvent.  This test
 	// verifies that the we're able to do this.
 	artdaq::RawEvent r1(1, 2, 3, 4, 5);
-	std::unique_ptr<artdaq::Fragment> f1(new artdaq::Fragment(1, 1));
-	std::unique_ptr<artdaq::Fragment> f2(new artdaq::Fragment(2, 1));
-	std::unique_ptr<artdaq::Fragment> f3(new artdaq::Fragment(3, 1));
+	std::unique_ptr<artdaq::Fragment> f1(new artdaq::Fragment(1, 1, artdaq::Fragment::DataFragmentType));
+	std::unique_ptr<artdaq::Fragment> f2(new artdaq::Fragment(2, 1, artdaq::Fragment::DataFragmentType));
+	std::unique_ptr<artdaq::Fragment> f3(new artdaq::Fragment(3, 1, artdaq::Fragment::DataFragmentType));
 
 	r1.insertFragment(std::move(f1));
 	r1.insertFragment(std::move(f2));
