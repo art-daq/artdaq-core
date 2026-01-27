@@ -20,6 +20,12 @@ find_package(cetmodules 3.16.00 REQUIRED)
 project(artdaq-core VERSION 4.03.00 LANGUAGES CXX C)
 
 include(CetCMakeEnv)
+include(SetCompilerFlags)
+include(CetCMakeConfig)
+include(InstallHeaders)
+include(InstallSource)
+include(InstallFhicl)
+
 cet_cmake_env()
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
