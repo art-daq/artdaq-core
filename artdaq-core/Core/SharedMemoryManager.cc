@@ -995,7 +995,7 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		if (!check)
 		{
 			TLOG(TLVL_WARNING) << "Failed to reset buffer " << buffer << " due to inconsistent semaphore state! semaphore.flags=" << FlagToString(semaphore.flags) << ", semaphore.id=" << semaphore.id;
-			//Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
+			// Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
 		}
 		return true;
 	}
