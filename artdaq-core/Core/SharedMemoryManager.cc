@@ -392,7 +392,7 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 	return -1;
 }
 
-int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
+int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequence_id_override)
 {
 	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting BEGIN, overwrite=" << (overwrite ? "true" : "false");
 
@@ -430,7 +430,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 				continue;
 			}
 			writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
-			buf->sequence_id = ++shm_ptr_->next_sequence_id;
+			buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;
 			buf->writePos = 0;
 			if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
 			{
@@ -472,7 +472,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 					continue;
 				}
 				writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
-				buf->sequence_id = ++shm_ptr_->next_sequence_id;
+				buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;
 				buf->writePos = 0;
 				if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
 				{
@@ -512,7 +512,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite)
 					continue;
 				}
 				writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
-				buf->sequence_id = ++shm_ptr_->next_sequence_id;
+				buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;
 				buf->writePos = 0;
 				if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
 				{
@@ -638,6 +638,7 @@ bool artdaq::SharedMemoryManager::ReadyForRead()
 		{
 			TLOG(TLVL_READREADY + 3) << std::hex << std::showbase << shm_key_ << std::dec << " ReadyForRead: Buffer " << buffer << " is either unowned or owned by this manager, and is marked full.";
 			touchBuffer_(buf);
+			reader_pos_ = buffer;  // Advance reader position to this buffer so that next search starts from here
 			return true;
 		}
 	}
@@ -671,7 +672,8 @@ bool artdaq::SharedMemoryManager::ReadyForWrite(bool overwrite)
 		{
 			TLOG(TLVL_WRITEREADY + 1) << std::hex << std::showbase << shm_key_
 			                          << std::dec
-			                          << " ReadyForWrite: Buffer " << ii << " is either empty or available for overwrite.";
+			                          << " ReadyForWrite: Buffer " << buffer << " is either empty or available for overwrite.";
+			writer_pos_ = buffer;  // Advance writer position to this buffer so that next search starts from here
 			return true;
 		}
 	}
@@ -994,7 +996,8 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		auto check = shmBuf->semaphore.compare_exchange_strong(semaphore, release);
 		if (!check)
 		{
-			Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
+			TLOG(TLVL_WARNING) << "Failed to reset buffer " << buffer << " due to inconsistent semaphore state! semaphore.flags=" << FlagToString(semaphore.flags) << ", semaphore.id=" << semaphore.id;
+			// Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
 		}
 		return true;
 	}

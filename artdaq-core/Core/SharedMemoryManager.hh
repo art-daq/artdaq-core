@@ -83,9 +83,10 @@ public:
 	/**
 	 * \brief Finds a buffer that is ready to be written to, and reserves it for the calling manager.
 	 * \param overwrite Whether to consider buffers that are in the Full and Reading state as ready for write (non-reliable mode)
+	 * \param sequence_id_override If non-zero, override the buffer sequence ID with the provided value for read ordering
 	 * \return The id number of the buffer. -1 indicates no buffers available for write.
 	 */
-	int GetBufferForWriting(bool overwrite);
+	int GetBufferForWriting(bool overwrite, size_t sequence_id_override = 0);
 
 	/**
 	 * \brief Whether any buffer is ready for read
