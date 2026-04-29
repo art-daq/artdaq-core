@@ -485,8 +485,13 @@ private:
 	inline uint8_t* bufferStart_(int buffer)
 	{
 		if (shm_ptr_ == nullptr) return nullptr;
-		if (buffer >= requested_shm_parameters_.buffer_count && buffer >= shm_ptr_->buffer_count) Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
-		return dataStart_() + buffer * shm_ptr_->buffer_size;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		if (buffer >= requested_shm_parameters_.buffer_count && buffer >= shm_ptr_->buffer_count)
+		{
+			Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
+			return nullptr;
+		}
+		else
+			return dataStart_() + buffer * shm_ptr_->buffer_size;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	}
 
 	inline ShmBuffer* getBufferInfo_(int buffer)
