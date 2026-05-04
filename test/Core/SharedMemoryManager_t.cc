@@ -10,6 +10,9 @@
 #include "SharedMemoryTestShims.hh"
 #include "TRACE/tracemf.h"
 
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <cerrno>
 #include <thread>
 
 BOOST_AUTO_TEST_SUITE(SharedMemoryManager_test)
@@ -48,6 +51,25 @@ BOOST_AUTO_TEST_CASE(Attach)
 	BOOST_REQUIRE_EQUAL(man2.GetKey(), key);
 
 	TLOG(TLVL_DEBUG) << "END TEST Attach";
+}
+
+BOOST_AUTO_TEST_CASE(OwnerRejectsMismatchedSegmentSize)
+{
+	TLOG(TLVL_DEBUG) << "BEGIN TEST OwnerRejectsMismatchedSegmentSize";
+	uint32_t key = GetRandomKey(0x7357);
+
+	auto stale_segment_id = shmget(key, 0x200000, IPC_CREAT | 0666);
+	BOOST_REQUIRE_NE(stale_segment_id, -1);
+
+	{
+		artdaq::SharedMemoryManager man(key, 10, 0x1000, 0x10000);
+		BOOST_REQUIRE_EQUAL(man.IsValid(), false);
+	}
+
+	// If the test manager already removed the stale segment this may fail with EINVAL.
+	auto cleanup = shmctl(stale_segment_id, IPC_RMID, nullptr);
+	BOOST_REQUIRE(cleanup == 0 || errno == EINVAL);
+	TLOG(TLVL_DEBUG) << "END TEST OwnerRejectsMismatchedSegmentSize";
 }
 
 BOOST_AUTO_TEST_CASE(DataFlow)
