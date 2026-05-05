@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(OwnerRejectsMismatchedSegmentSize)
 
 	// If the test manager already removed the stale segment this may fail with EINVAL.
 	auto cleanup = shmctl(stale_segment_id, IPC_RMID, nullptr);
-	BOOST_REQUIRE(cleanup == 0 || errno == EINVAL);
+	BOOST_REQUIRE_EQUAL((cleanup == 0 || errno == EINVAL), true);
 	TLOG(TLVL_DEBUG) << "END TEST OwnerRejectsMismatchedSegmentSize";
 }
 
