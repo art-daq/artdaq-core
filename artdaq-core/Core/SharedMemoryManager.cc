@@ -220,7 +220,7 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 		auto allocatedSize = static_cast<size_t>(shm_info.shm_segsz);
 		TLOG(TLVL_ATTACH) << "Shared memory segment " << shm_segment_id_
 		                  << " has allocated size " << allocatedSize
-		                  << " bytes";
+		                  << " bytes (requested " << shmSize << " bytes)";
 		if (allocatedSize < shmSize || (manager_id_ == 0 && allocatedSize > shmSize))
 		{
 			TLOG(TLVL_ERROR) << "Shared memory segment size mismatch for key " << std::hex << std::showbase << shm_key_
