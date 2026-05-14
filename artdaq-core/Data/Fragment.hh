@@ -753,6 +753,7 @@ private:
 #if HIDE_FROM_ROOT
 
 	mutable detail::RawFragmentHeader* upgraded_header_{nullptr};
+	mutable detail::RawFragmentHeader* hdr_cache_{nullptr};
 
 	detail::RawFragmentHeader* fragmentHeaderPtr() const;
 
@@ -1229,7 +1230,7 @@ artdaq::Fragment::headerSizeWords() const
 inline artdaq::detail::RawFragmentHeader*
 artdaq::Fragment::fragmentHeaderPtr() const
 {
-	if (upgraded_header_ != nullptr) return upgraded_header_;
+	if (hdr_cache_ != nullptr) return hdr_cache_;
 	auto hdr = reinterpret_cast_checked<detail::RawFragmentHeader const*>(&vals_[0]);
 	if (hdr->version != detail::RawFragmentHeader::CurrentVersion)
 	{
@@ -1242,6 +1243,7 @@ artdaq::Fragment::fragmentHeaderPtr() const
 				TLOG(52, "Fragment") << "Upgrading RawFragmentHeaderV0 (non const)";
 				auto old_hdr = reinterpret_cast_checked<detail::RawFragmentHeaderV0 const*>(&vals_[0]);
 				upgraded_header_ = new detail::RawFragmentHeader(old_hdr->upgrade());
+				hdr_cache_ = upgraded_header_;
 				return upgraded_header_;
 				break;
 			}
@@ -1249,6 +1251,7 @@ artdaq::Fragment::fragmentHeaderPtr() const
 				TLOG(52, "Fragment") << "Upgrading RawFragmentHeaderV1 (non const)";
 				auto old_hdr = reinterpret_cast_checked<detail::RawFragmentHeaderV1 const*>(&vals_[0]);
 				upgraded_header_ = new detail::RawFragmentHeader(old_hdr->upgrade());
+				hdr_cache_ = upgraded_header_;
 				return upgraded_header_;
 				break;
 			}
