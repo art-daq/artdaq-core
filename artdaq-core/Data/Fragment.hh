@@ -1260,7 +1260,8 @@ artdaq::Fragment::fragmentHeaderPtr() const
 				break;
 		}
 	}
-	return const_cast<detail::RawFragmentHeader*>(hdr);
+	hdr_cache_ = const_cast<detail::RawFragmentHeader*>(hdr);
+	return hdr_cache_;
 }
 
 inline artdaq::detail::RawFragmentHeader const
