@@ -708,6 +708,13 @@ public:
 	RawDataType* headerAddress();
 
 	/**
+	 * \brief Invalidates the cached header information, so that it will be re-upgraded on the next access.
+	 *
+	 * Used in Fragment_t
+	 */
+	void invalidateHeader() { header_check_ = false; }
+
+	/**
 	 * \brief Creates an EndOfData Fragment
 	 * \param nFragsToExpect The number of Fragments the receiver should have at the end of data-taking
 	 * \return Pointer to created EndOfData Fragment
@@ -753,7 +760,7 @@ private:
 #if HIDE_FROM_ROOT
 
 	mutable detail::RawFragmentHeader* upgraded_header_{nullptr};
-	mutable detail::RawFragmentHeader* hdr_cache_{nullptr};
+	mutable std::atomic<bool> header_check_{false};
 
 	detail::RawFragmentHeader* fragmentHeaderPtr() const;
 
@@ -1230,20 +1237,16 @@ artdaq::Fragment::headerSizeWords() const
 inline artdaq::detail::RawFragmentHeader*
 artdaq::Fragment::fragmentHeaderPtr() const
 {
-	if (hdr_cache_ != nullptr) return hdr_cache_;
+	if (upgraded_header_ != nullptr) return upgraded_header_;
 	auto hdr = reinterpret_cast_checked<detail::RawFragmentHeader const*>(&vals_[0]);
-	if (hdr->version != detail::RawFragmentHeader::CurrentVersion)
+	if (!header_check_.load() && hdr->version != detail::RawFragmentHeader::CurrentVersion)
 	{
 		switch (hdr->version)
 		{
-			case 0xFFFF:
-				TLOG(51, "Fragment") << "Not upgrading InvalidVersion Fragment";
-				break;
 			case 0: {
 				TLOG(52, "Fragment") << "Upgrading RawFragmentHeaderV0 (non const)";
 				auto old_hdr = reinterpret_cast_checked<detail::RawFragmentHeaderV0 const*>(&vals_[0]);
 				upgraded_header_ = new detail::RawFragmentHeader(old_hdr->upgrade());
-				hdr_cache_ = upgraded_header_;
 				return upgraded_header_;
 				break;
 			}
@@ -1251,17 +1254,20 @@ artdaq::Fragment::fragmentHeaderPtr() const
 				TLOG(52, "Fragment") << "Upgrading RawFragmentHeaderV1 (non const)";
 				auto old_hdr = reinterpret_cast_checked<detail::RawFragmentHeaderV1 const*>(&vals_[0]);
 				upgraded_header_ = new detail::RawFragmentHeader(old_hdr->upgrade());
-				hdr_cache_ = upgraded_header_;
 				return upgraded_header_;
 				break;
 			}
+			case 0xFFFF:
+				TLOG(51, "Fragment") << "Not upgrading InvalidVersion Fragment";
+				break;
 			default:
 				throw cet::exception("Fragment") << "A Fragment with an unknown version (" << std::to_string(hdr->version) << ") was received!";  // NOLINT(cert-err60-cpp)
 				break;
 		}
 	}
-	hdr_cache_ = const_cast<detail::RawFragmentHeader*>(hdr);
-	return hdr_cache_;
+
+	header_check_ = true;
+	return const_cast<detail::RawFragmentHeader*>(hdr);
 }
 
 inline artdaq::detail::RawFragmentHeader const
