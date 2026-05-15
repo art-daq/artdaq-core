@@ -209,6 +209,25 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 
 	if (shm_segment_id_ > -1)
 	{
+		struct shmid_ds shm_info;
+		if (shmctl(shm_segment_id_, IPC_STAT, &shm_info) == -1)
+		{
+			TLOG(TLVL_ERROR) << "Failed to query shared memory segment size for segment "
+			                 << shm_segment_id_ << ", errno=" << std::dec << errno << " (" << strerror(errno) << ")";
+			return false;
+		}
+
+		auto allocatedSize = static_cast<size_t>(shm_info.shm_segsz);
+		TLOG(TLVL_ATTACH) << "Shared memory segment " << shm_segment_id_
+		                  << " has allocated size " << allocatedSize
+		                  << " bytes (requested " << shmSize << " bytes)";
+		if (allocatedSize < shmSize || (manager_id_ == 0 && allocatedSize > shmSize))
+		{
+			TLOG(TLVL_ERROR) << "Shared memory segment size mismatch for key " << std::hex << std::showbase << shm_key_
+			                 << ": requested " << std::dec << shmSize << " bytes but got " << allocatedSize << " bytes";
+			return false;
+		}
+
 		TLOG(TLVL_ATTACH)
 		    << "Attached to shared memory segment with ID = " << shm_segment_id_
 		    << " and size " << shmSize
