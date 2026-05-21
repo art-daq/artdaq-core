@@ -396,7 +396,7 @@ public:
 		auto err = sysinfo(&meminfo);
 		if (err == 0)
 		{
-			return meminfo.freeram * meminfo.mem_unit;
+			return (meminfo.freeram + meminfo.bufferram) * meminfo.mem_unit;
 		}
 		return 0;
 	}
