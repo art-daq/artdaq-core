@@ -520,6 +520,7 @@ private:
 	bool registered_reader_{false};
 	bool registered_writer_{false};
 	size_t min_write_size_;
+	size_t buffer_claim_timeout_us_ = 100000;
 	static constexpr size_t rr_catch_up_factor_ = 3;
 };
 
