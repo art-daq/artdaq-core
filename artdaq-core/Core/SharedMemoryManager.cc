@@ -251,6 +251,10 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 				TLOG(TLVL_ATTACH) << "Owner initializing Shared Memory";
 				shm_ptr_->next_id = 1;
 				shm_ptr_->next_sequence_id = 0;
+				bzero(shm_ptr_->manager_pids, sizeof(shm_ptr_->manager_pids));
+				shm_ptr_->manager_pids[0] = getpid();
+				shm_ptr_->reader_mask = 0;
+				shm_ptr_->writer_mask = 0;
 				shm_ptr_->buffer_size = requested_shm_parameters_.buffer_size;
 				shm_ptr_->buffer_count = requested_shm_parameters_.buffer_count;
 				shm_ptr_->buffer_timeout_us = requested_shm_parameters_.buffer_timeout_us;
@@ -1049,7 +1053,7 @@ bool artdaq::SharedMemoryManager::IsEndOfData() const
 	return false;
 }
 
-uint16_t artdaq::SharedMemoryManager::GetAttachedCount() const
+uint16_t artdaq::SharedMemoryManager::GetAttachedCount()
 {
 	if (!IsValid())
 	{
@@ -1062,6 +1066,18 @@ uint16_t artdaq::SharedMemoryManager::GetAttachedCount() const
 	{
 		TLOG(TLVL_BUFINFO) << "Error accessing Shared Memory info: " << errno << " (" << strerror(errno) << ").";
 		return 0;
+	}
+
+	for (size_t ii = 0; ii < 64; ++ii)
+	{
+		auto ret = kill(shm_ptr_->manager_pids[ii], 0);
+		if (ret < 0 && errno == ESRCH)
+		{
+			TLOG(TLVL_WARNING) << "Manager " << ii << ", PID " << shm_ptr_->manager_pids[ii] << " is not running.";
+			UnregisterReader(ii);
+			UnregisterWriter(ii);
+			shm_ptr_->manager_pids[ii] = 0;
+		}
 	}
 
 	return info.shm_nattch;
