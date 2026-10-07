@@ -1,17 +1,23 @@
 #define TRACE_NAME "SharedMemoryManager"
+
+#include "artdaq-core/Core/SharedMemoryManager.hh"
+
+#include "TRACE/tracemf.h"
+
+#include "cetlib_except/exception.h"
+
+#include <csignal>
+#include <utility>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <cstring>
 #include <list>
 #include <map>
 #include <unordered_map>
+
 #ifndef SHM_DEST  // Lynn reports that this is missing on Mac OS X?!?
 #define SHM_DEST 01000
 #endif
-#include <csignal>
-#include "TRACE/tracemf.h"
-#include "artdaq-core/Core/SharedMemoryManager.hh"
-#include "cetlib_except/exception.h"
 
 #define TLVL_DETACH 34
 #define TLVL_DESTRUCTOR 35
@@ -547,7 +553,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 	}
 	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting Returning -1 because no buffers are ready";
 	return -1;
-}
+} // NOLINT(readability/fn_size)
 
 size_t artdaq::SharedMemoryManager::ReadReadyCount()
 {
