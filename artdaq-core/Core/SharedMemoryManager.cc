@@ -1012,13 +1012,15 @@ bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
 		TLOG(TLVL_WARNING) << "Stale Read buffer " << buffer << " at " << static_cast<void*>(shmBuf)
 		                   << " ( " << delta << " / " << shm_ptr_->buffer_timeout_us << " us ) detected! (seqid="
 		                   << shmBuf->sequence_id << ", owner=" << semaphore.id << ") Resetting... Reading-->Full";
-		shmBuf->readPos = 0;
 		ShmBufferSem release(BufferSemaphoreFlags::Full, -1);
 		auto check = shmBuf->semaphore.compare_exchange_strong(semaphore, release);
-		if (!check)
+		if (check)
 		{
-			TLOG(TLVL_WARNING) << "Failed to reset buffer " << buffer << " due to inconsistent semaphore state! semaphore.flags=" << FlagToString(semaphore.flags) << ", semaphore.id=" << semaphore.id;
-			// Detach(true, "LogicError", "Unable to release buffer because of inconsistent semaphore state!");
+			shmBuf->readPos = 0;
+		}
+		else
+		{
+			TLOG(TLVL_WARNING) << "Stale Read buffer " << buffer << " was already released (semaphore.flags=" << FlagToString(semaphore.flags) << ", semaphore.id=" << semaphore.id << "), skipping reset";
 		}
 		return true;
 	}
