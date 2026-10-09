@@ -1,11 +1,13 @@
-#ifndef artdaq_core_Core_StatisticsCollection_hh
-#define artdaq_core_Core_StatisticsCollection_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_CORE_STATISTICSCOLLECTION_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_CORE_STATISTICSCOLLECTION_HH_
+
+#include "artdaq-core/Core/MonitoredQuantity.hh"
 
 #include <boost/thread.hpp>
 #include <map>
 #include <memory>
 #include <mutex>
-#include "artdaq-core/Core/MonitoredQuantity.hh"
+#include <string>
 
 namespace artdaq {
 /**
@@ -67,7 +69,7 @@ private:
 	/**
 	 * \brief Private constructor used by static getInstance()
 	 */
-	explicit StatisticsCollection();
+	StatisticsCollection();
 
 	// disallow any copying
 	/**
@@ -107,4 +109,4 @@ private:
 };
 }  // namespace artdaq
 
-#endif /* artdaq_core_Core_StatisticsCollection_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_CORE_STATISTICSCOLLECTION_HH_

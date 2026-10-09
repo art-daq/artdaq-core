@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_CASE(Construct)
 {
 	artdaq::configureMessageFacility("SharedMemoryManager_t", true, true);
 	TLOG(TLVL_DEBUG) << "BEGIN TEST Construct";
-	uint32_t key = GetRandomKey(0x7357);
+	auto key = GetRandomKey(0x7357);
 	artdaq::SharedMemoryManager man(key, 10, 0x1000, 0x10000);
 	BOOST_REQUIRE_EQUAL(man.IsValid(), true);
 	BOOST_REQUIRE_EQUAL(man.GetMyId(), 0);
@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(Construct)
 BOOST_AUTO_TEST_CASE(Attach)
 {
 	TLOG(TLVL_DEBUG) << "BEGIN TEST Attach";
-	uint32_t key = GetRandomKey(0x7357);
+	auto key = GetRandomKey(0x7357);
 	artdaq::SharedMemoryManager man(key, 10, 0x1000, 0x10000);
 	artdaq::SharedMemoryManager man2(key);
 
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(Attach)
 BOOST_AUTO_TEST_CASE(OwnerRejectsMismatchedSegmentSize)
 {
 	TLOG(TLVL_DEBUG) << "BEGIN TEST OwnerRejectsMismatchedSegmentSize";
-	uint32_t key = GetRandomKey(0x7357);
+	auto key = GetRandomKey(0x7357);
 	constexpr size_t stale_segment_size = 0x200000;
 	constexpr size_t buffer_count = 10;
 	constexpr size_t buffer_size = 0x1000;
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(DataFlow)
 {
 	TRACE_CNTL("modeM", (uint64_t)1);
 	TLOG(TLVL_DEBUG) << "BEGIN TEST DataFlow";
-	uint32_t key = GetRandomKey(0x7357);
+	auto key = GetRandomKey(0x7357);
 	artdaq::SharedMemoryManager man(key, 10, 0x1000);
 	artdaq::SharedMemoryManager man2(key);
 
@@ -97,8 +97,8 @@ BOOST_AUTO_TEST_CASE(DataFlow)
 	BOOST_REQUIRE_EQUAL(man.BufferDataSize(buf), 0);
 
 	uint8_t n = 0;
-	uint8_t data[0x1000];
-	std::generate_n(data, 0x1000, [&]() { return ++n; });
+	uint8_t data[0x1000];                                  // NOLINT(modernize-avoid-c-arrays)
+	std::generate_n(data, 0x1000, [&]() { return ++n; });  // NOLINT(runtime/increment_decrement)
 	man.Write(buf, data, 0x1000);
 	BOOST_REQUIRE_EQUAL(man.BufferDataSize(buf), 0x1000);
 	BOOST_REQUIRE_EQUAL(man2.BufferDataSize(buf), 0x1000);
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(DataFlow)
 	auto readbuf = man2.GetBufferForReading();
 	BOOST_REQUIRE_EQUAL(man2.CheckBuffer(buf, artdaq::SharedMemoryManager::BufferSemaphoreFlags::Reading), true);
 	BOOST_REQUIRE_EQUAL(man2.MoreDataInBuffer(readbuf), true);
-	uint8_t byte;
+	uint8_t byte{0};
 	auto sts = man2.Read(readbuf, &byte, 1);
 	BOOST_REQUIRE_EQUAL(sts, true);
 	BOOST_REQUIRE_EQUAL(byte, 1);  // ++n means that the first entry will be 1
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 	TRACE_CNTL("modeM", (uint64_t)1);
 	artdaq::configureMessageFacility("SharedMemoryManager_t", true, true);
 	TLOG(TLVL_DEBUG) << "BEGIN TEST Exceptions";
-	uint32_t key = GetRandomKey(0x7357);
+	auto key = GetRandomKey(0x7357);
 	artdaq::SharedMemoryManager man(key, 10, 0x1000);
 	artdaq::SharedMemoryManager man2(key);
 	BOOST_REQUIRE_EQUAL(man.ReadyForWrite(false), true);
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 	BOOST_REQUIRE_EXCEPTION(man.ResetBuffer(11), cet::exception, [&](cet::exception e) { return e.category() == "ArgumentOutOfRange"; });
 	BOOST_REQUIRE_EQUAL(man.IsValid(), false);
 	man.Attach();
-	int dummy[2]{0, 1};
+	int dummy[2]{0, 1};  // NOLINT(modernize-avoid-c-arrays)
 	BOOST_REQUIRE_EXCEPTION(man.Write(11, &dummy, sizeof(dummy)), cet::exception, [&](cet::exception e) { return e.category() == "ArgumentOutOfRange"; });
 	BOOST_REQUIRE_EQUAL(man.IsValid(), false);
 	man.Attach();
@@ -209,8 +209,8 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 	BOOST_REQUIRE_EQUAL(man.BufferDataSize(buf), 0);
 
 	uint8_t n = 0;
-	uint8_t data[0x2000];
-	std::generate_n(data, 0x2000, [&]() { return ++n; });
+	uint8_t data[0x2000];                                  // NOLINT(modernize-avoid-c-arrays)
+	std::generate_n(data, 0x2000, [&]() { return ++n; });  // NOLINT(runtime/increment_decrement)
 	BOOST_REQUIRE_EXCEPTION(man.Write(buf, data, 0x2000), cet::exception, [&](cet::exception e) { return e.category() == "SharedMemoryWrite"; });
 	BOOST_REQUIRE_EQUAL(man.IsValid(), false);
 
@@ -271,7 +271,7 @@ BOOST_AUTO_TEST_CASE(Broadcast)
 {
 	TRACE_CNTL("modeM", (uint64_t)1);
 	TLOG(TLVL_DEBUG) << "BEGIN TEST Broadcast";
-	uint32_t key = GetRandomKey(0x7357);
+	auto key = GetRandomKey(0x7357);
 	artdaq::SharedMemoryManager man(key, 10, 0x1000, 0x10000, false);
 	artdaq::SharedMemoryManager man2(key);
 	artdaq::SharedMemoryManager man3(key);
@@ -289,8 +289,8 @@ BOOST_AUTO_TEST_CASE(Broadcast)
 	BOOST_REQUIRE_EQUAL(man.BufferDataSize(buf), 0);
 
 	uint8_t n = 0;
-	uint8_t data[0x1000];
-	std::generate_n(data, 0x1000, [&]() { return ++n; });
+	uint8_t data[0x1000];                                  // NOLINT(modernize-avoid-c-arrays)
+	std::generate_n(data, 0x1000, [&]() { return ++n; });  // NOLINT(runtime/increment_decrement)
 	man.Write(buf, data, 0x1000);
 	BOOST_REQUIRE_EQUAL(man.BufferDataSize(buf), 0x1000);
 	BOOST_REQUIRE_EQUAL(man2.BufferDataSize(buf), 0x1000);
@@ -309,7 +309,7 @@ BOOST_AUTO_TEST_CASE(Broadcast)
 	BOOST_REQUIRE_EQUAL(man3.ReadyForRead(), false);
 	BOOST_REQUIRE_EQUAL(man2.CheckBuffer(buf, artdaq::SharedMemoryManager::BufferSemaphoreFlags::Reading), true);
 	BOOST_REQUIRE_EQUAL(man2.MoreDataInBuffer(readbuf), true);
-	uint8_t byte;
+	uint8_t byte{0};
 	auto sts = man2.Read(readbuf, &byte, 1);
 	BOOST_REQUIRE_EQUAL(sts, true);
 	BOOST_REQUIRE_EQUAL(byte, 1);  // ++n means that the first entry will be 1
@@ -379,17 +379,17 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 {
 	TRACE_CNTL("modeM", (uint64_t)1);
 	TLOG(TLVL_DEBUG) << "BEGIN TEST RoundRobin";
-	uint32_t key = GetRandomKey(0x7357);
+	auto key = GetRandomKey(0x7357);
 	artdaq::SharedMemoryManager man(key, 1000, 0x1000);
 
 	uint8_t n = 0;
-	uint8_t data[0x1000];
-	std::generate_n(data, 0x1000, [&]() { return ++n; });
+	uint8_t data[0x1000];                                  // NOLINT(modernize-avoid-c-arrays)
+	std::generate_n(data, 0x1000, [&]() { return ++n; });  // NOLINT(runtime/increment_decrement)
 
 	const int reader_count = 10;
 	const size_t n_writes = 10'000;
 
-	auto reader_proc = [key, reader_count]() {
+	auto reader_proc = [key]() {
 		size_t counter = 0;
 		size_t ooo_counter = 0;
 		size_t misses_after_start = 0;
@@ -413,7 +413,10 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 				auto buffer_id = reader_man.GetBufferForReading();
 				if (buffer_id == -1)
 				{
-					if (counter != 0) misses_after_start++;
+					if (counter != 0)
+					{
+						misses_after_start++;
+					}
 					std::this_thread::yield();
 					continue;
 				}
@@ -438,7 +441,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 		reader_man.UnregisterReader();
 	};
 
-	auto writer_proc = [&man, n_writes]() {
+	auto writer_proc = [&man]() {
 		TLOG(TLVL_INFO) << "Writer Starting";
 		size_t write_counter = 0;
 		auto current_oom = 1;
@@ -472,7 +475,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 	std::vector<std::jthread> threads;
 	for (int ii = 0; ii < reader_count; ++ii)
 	{
-		threads.emplace_back(reader_proc);
+		threads.emplace_back(reader_proc);  // NOLINT(performance-inefficient-vector-operation)
 	}
 	threads.emplace_back(writer_proc);
 

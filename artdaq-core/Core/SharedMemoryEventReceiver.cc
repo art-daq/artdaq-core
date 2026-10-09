@@ -1,12 +1,15 @@
 
 #include "artdaq-core/Core/SharedMemoryEventReceiver.hh"
-
-#include <sys/time.h>
 #include "artdaq-core/Data/Fragment.hh"
+
 #define TRACE_NAME "SharedMemoryEventReceiver"
 #include "TRACE/tracemf.h"
 
-artdaq::SharedMemoryEventReceiver::SharedMemoryEventReceiver(uint32_t shm_key, uint32_t broadcast_shm_key)
+#include <sys/time.h>
+#include <memory>
+#include <string>
+
+artdaq::SharedMemoryEventReceiver::SharedMemoryEventReceiver(key_t shm_key, key_t broadcast_shm_key)
     : current_read_buffer_(-1)
     , initialized_(false)
     , current_header_(nullptr)
@@ -55,20 +58,20 @@ bool artdaq::SharedMemoryEventReceiver::ReadyForRead(bool broadcast, size_t time
 		{
 			current_read_buffer_ = buf;
 			current_data_source_->ResetReadPos(buf);
-			current_header_ = reinterpret_cast<detail::RawEventHeader*>(current_data_source_->GetReadPos(buf));  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+			current_header_ = reinterpret_cast<detail::RawEventHeader*>(current_data_source_->GetReadPos(buf));  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 			TLOG(TLVL_DEBUG + 33) << "ReadyForRead Found buffer, returning true. event hdr sequence_id=" << current_header_->sequence_id;
 
 			// Ignore any Init fragments after the first
 			if (current_data_source_ == &broadcasts_)
 			{
-				bool err;
+				bool err{false};
 				auto types = GetFragmentTypes(err);
-				if (!err && (types.count(Fragment::type_t(Fragment::InitFragmentType)) != 0u) && initialized_)
+				if (!err && (types.count(Fragment::InitFragmentType) != 0u) && initialized_)
 				{
 					ReleaseBuffer();
 					continue;
 				}
-				if (!err && (types.count(Fragment::type_t(Fragment::InitFragmentType)) != 0u))
+				if (!err && (types.count(Fragment::InitFragmentType) != 0u))
 				{
 					initialized_ = true;
 				}
@@ -138,7 +141,7 @@ std::set<artdaq::Fragment::type_t> artdaq::SharedMemoryEventReceiver::GetFragmen
 		{
 			return std::set<Fragment::type_t>();
 		}
-		auto fragHdr = reinterpret_cast<artdaq::detail::RawFragmentHeader*>(current_data_source_->GetReadPos(current_read_buffer_));  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		auto fragHdr = reinterpret_cast<artdaq::detail::RawFragmentHeader*>(current_data_source_->GetReadPos(current_read_buffer_));  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 		output.insert(fragHdr->type);
 		current_data_source_->IncrementReadPos(current_read_buffer_, fragHdr->word_count * sizeof(RawDataType));
 	}
@@ -170,7 +173,7 @@ std::unique_ptr<artdaq::Fragments> artdaq::SharedMemoryEventReceiver::GetFragmen
 		{
 			return nullptr;
 		}
-		auto fragHdr = reinterpret_cast<artdaq::detail::RawFragmentHeader*>(current_data_source_->GetReadPos(current_read_buffer_));  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		auto fragHdr = reinterpret_cast<artdaq::detail::RawFragmentHeader*>(current_data_source_->GetReadPos(current_read_buffer_));  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 		if (fragHdr->type == type || type == Fragment::InvalidFragmentType)
 		{
 			output->emplace_back(fragHdr->word_count - detail::RawFragmentHeader::num_words());
@@ -194,20 +197,20 @@ std::string artdaq::SharedMemoryEventReceiver::printBuffers_(SharedMemoryManager
 		ostr << "Buffer " << ii << ": " << std::endl;
 
 		void* data_ptr = data_source->GetBufferStart(ii);
-		void* end_ptr = static_cast<uint8_t*>(data_ptr) + data_source->BufferDataSize(ii);
-		data_ptr = static_cast<uint8_t*>(data_ptr) + sizeof(detail::RawEventHeader);
+		void* end_ptr = static_cast<uint8_t*>(data_ptr) + data_source->BufferDataSize(ii);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		data_ptr = static_cast<uint8_t*>(data_ptr) + sizeof(detail::RawEventHeader);        // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 		TLOG_DEBUG(33) << "Buffer " << ii << ": data_ptr: " << data_ptr << ", end_ptr: " << end_ptr;
 
 		while (data_ptr < end_ptr)
 		{
-			auto fragHdr = reinterpret_cast<artdaq::detail::RawFragmentHeader*>(data_ptr);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+			auto fragHdr = reinterpret_cast<artdaq::detail::RawFragmentHeader*>(data_ptr);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 			ostr << "    Fragment " << fragHdr->fragment_id << ": Sequence ID: " << fragHdr->sequence_id << ", Type:" << fragHdr->type;
 			if (artdaq::detail::RawFragmentHeader::MakeVerboseSystemTypeMap().count(fragHdr->type) != 0u)
 			{
 				ostr << " (" << artdaq::detail::RawFragmentHeader::MakeVerboseSystemTypeMap()[fragHdr->type] << ")";
 			}
 			ostr << ", Size: " << fragHdr->word_count << " words." << std::endl;
-			data_ptr = static_cast<uint8_t*>(data_ptr) + fragHdr->word_count * sizeof(RawDataType);
+			data_ptr = static_cast<uint8_t*>(data_ptr) + fragHdr->word_count * sizeof(RawDataType);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
 			TLOG_DEBUG(33) << "Buffer " << ii << ": After reading Fragment of size " << static_cast<int>(fragHdr->word_count * sizeof(RawDataType)) << " data_ptr: " << data_ptr << ", end_ptr: " << end_ptr;
 		}
@@ -246,7 +249,7 @@ void artdaq::SharedMemoryEventReceiver::ReleaseBuffer()
 	{
 		TLOG(TLVL_WARNING) << "A cet::exception occured while trying to release the buffer: " << e;
 	}
-	catch (...)
+	catch (...)  // NOLINT
 	{
 		TLOG(TLVL_ERROR) << "An unknown exception occured while trying to release the buffer";
 	}

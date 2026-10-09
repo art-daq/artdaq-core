@@ -31,7 +31,7 @@ struct MetadataTypeTwo
  */
 struct MetadataTypeHuge
 {
-	uint64_t fields[300];  ///< 300 long words
+	uint64_t fields[300];  // NOLINT(modernize-avoid-c-arrays)
 };
 
 BOOST_AUTO_TEST_SUITE(Fragment_test)
@@ -496,43 +496,43 @@ BOOST_AUTO_TEST_CASE(Bytes)
 	// (now-deprecated, but still in legacy code) dataAddress() point to
 	// the same region in memory, i.e., the start of the payload
 
-	auto* hdrptr = reinterpret_cast<artdaq::Fragment::byte_t*>(  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto* hdrptr = reinterpret_cast<artdaq::Fragment::byte_t*>(  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	    &*f3_factory->headerBegin());
 	BOOST_REQUIRE_EQUAL(&*f3_factory->headerBeginBytes(), hdrptr);
 
-	auto* ptr1 = reinterpret_cast<artdaq::Fragment::byte_t*>(  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto* ptr1 = reinterpret_cast<artdaq::Fragment::byte_t*>(  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	    &*f3_factory->dataBegin());
 
 	artdaq::Fragment::byte_t* ptr2 = f3_factory->dataBeginBytes();
 
-	auto* ptr3 = reinterpret_cast<artdaq::Fragment::byte_t*>(f3_factory->dataAddress());  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto* ptr3 = reinterpret_cast<artdaq::Fragment::byte_t*>(f3_factory->dataAddress());  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 
 	BOOST_REQUIRE_EQUAL(ptr1, ptr2);
 	BOOST_REQUIRE_EQUAL(ptr2, ptr3);
 
-	auto* dataEndPtr = reinterpret_cast<artdaq::Fragment::byte_t*>(  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto* dataEndPtr = reinterpret_cast<artdaq::Fragment::byte_t*>(  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	    &*f3_factory->dataEnd());
 	BOOST_REQUIRE_EQUAL(&*f3_factory->dataEndBytes(), dataEndPtr);
 
 	// Check const versions, too
 	const artdaq::Fragment f3_copy(*f3_factory);
-	auto chdrptr = reinterpret_cast<const artdaq::Fragment::byte_t*>(f3_copy.headerBegin());  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto chdrptr = reinterpret_cast<const artdaq::Fragment::byte_t*>(f3_copy.headerBegin());  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	BOOST_REQUIRE_EQUAL(&*f3_copy.headerBeginBytes(), chdrptr);
-	auto* cptr1 = reinterpret_cast<const artdaq::Fragment::byte_t*>(  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto* cptr1 = reinterpret_cast<const artdaq::Fragment::byte_t*>(  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	    &*f3_copy.dataBegin());
 
 	const artdaq::Fragment::byte_t* cptr2 = f3_copy.dataBeginBytes();
 
 	BOOST_REQUIRE_EQUAL(cptr1, cptr2);
 
-	auto* cdataEndPtr = reinterpret_cast<const artdaq::Fragment::byte_t*>(  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto* cdataEndPtr = reinterpret_cast<const artdaq::Fragment::byte_t*>(  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	    &*f3_copy.dataEnd());
 	BOOST_REQUIRE_EQUAL(&*f3_copy.dataEndBytes(), cdataEndPtr);
 
 	// Make sure metadata struct gets aligned
 	// header == 3 RawDataTypes, metadata is 3 bytes (rounds up to 1 RawDataType)
 	std::size_t const metadata_size =
-	    f3_factory->dataBeginBytes() - reinterpret_cast<artdaq::Fragment::byte_t*>(&*f3_factory->headerBegin());  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	    f3_factory->dataBeginBytes() - reinterpret_cast<artdaq::Fragment::byte_t*>(&*f3_factory->headerBegin());  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	BOOST_REQUIRE(metadata_size ==
 	              (1 + artdaq::detail::RawFragmentHeader::num_words()) * sizeof(artdaq::RawDataType));
 
@@ -628,7 +628,7 @@ BOOST_AUTO_TEST_CASE(Upgrade_V0)
 	artdaq::detail::RawFragmentHeader::RawDataType counter = 0;
 	for (size_t ii = artdaq::detail::RawFragmentHeaderV0::num_words(); ii < artdaq::detail::RawFragmentHeader::num_words() + 7; ++ii)
 	{
-		memcpy(f.headerBegin() + ii, &(++counter), sizeof(counter));
+		memcpy(f.headerBegin() + ii, &(++counter), sizeof(counter));  // NOLINT(runtime/increment_decrement)
 	}
 
 	BOOST_REQUIRE_EQUAL(f.version(), 0);
@@ -665,7 +665,7 @@ BOOST_AUTO_TEST_CASE(Upgrade_V1)
 	artdaq::detail::RawFragmentHeader::RawDataType counter = 0;
 	for (size_t ii = artdaq::detail::RawFragmentHeaderV1::num_words(); ii < artdaq::detail::RawFragmentHeader::num_words() + 7; ++ii)
 	{
-		memcpy(f.headerBegin() + ii, &(++counter), sizeof(counter));
+		memcpy(f.headerBegin() + ii, &(++counter), sizeof(counter));  // NOLINT(runtime/increment_decrement)
 	}
 
 	BOOST_REQUIRE_EQUAL(f.version(), 1);

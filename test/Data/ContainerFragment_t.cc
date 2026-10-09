@@ -9,13 +9,13 @@ BOOST_AUTO_TEST_CASE(Construct)
 {
 	artdaq::Fragment f(0);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 
 	BOOST_REQUIRE_EQUAL(f.dataSize(), 1);
 	BOOST_REQUIRE_EQUAL(cf->block_count(), 0);
 	auto type = artdaq::Fragment::EmptyFragmentType;
 	BOOST_REQUIRE_EQUAL(cf->fragment_type(), type);
-	BOOST_REQUIRE_EQUAL(*reinterpret_cast<const size_t*>(cf->dataBegin()), artdaq::ContainerFragment::CONTAINER_MAGIC);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	BOOST_REQUIRE_EQUAL(*reinterpret_cast<const size_t*>(cf->dataBegin()), artdaq::ContainerFragment::CONTAINER_MAGIC);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
 BOOST_AUTO_TEST_CASE(AddEmptyFragment)
@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(AddEmptyFragment)
 
 	artdaq::Fragment f(0);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	cfl.set_fragment_type(artdaq::Fragment::EmptyFragmentType);
 	cfl.addFragment(*frag);
 
@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(AddEmptyFragment)
 	auto type = artdaq::Fragment::EmptyFragmentType;
 	BOOST_REQUIRE_EQUAL(cf->fragment_type(), type);
 
-	delete frag;
+	delete frag;  // NOLINT
 }
 
 BOOST_AUTO_TEST_CASE(AddFragment_Ptr)
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(AddFragment_Ptr)
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	cfl.addFragment(tmpFrag);
 
 	BOOST_REQUIRE_EQUAL(f.dataSizeBytes(), sizeof(artdaq::detail::RawFragmentHeader) + 4 * sizeof(artdaq::Fragment::value_type) + (2 * sizeof(size_t)));
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(AddFragment_Ref)
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	cfl.addFragment(frag);
 
 	BOOST_REQUIRE_EQUAL(f.dataSizeBytes(), sizeof(artdaq::detail::RawFragmentHeader) + 4 * sizeof(artdaq::Fragment::value_type) + (2 * sizeof(size_t)));
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(AddFragments)
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	cfl.addFragments(frags);
 
 	BOOST_REQUIRE_EQUAL(f.dataSizeBytes(), 2 * (sizeof(artdaq::detail::RawFragmentHeader) + 4 * sizeof(artdaq::Fragment::value_type) + sizeof(size_t)) + sizeof(size_t));
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(AddFragments)
 	BOOST_REQUIRE_EQUAL(*(outfrag->dataBegin() + 1), 6);
 }
 
-#define PERF_TEST_FRAGMENT_COUNT 1000
+constexpr int PERF_TEST_FRAGMENT_COUNT = 1000;
 BOOST_AUTO_TEST_CASE(Performance)
 {
 	artdaq::FragmentPtrs frags;
@@ -167,7 +167,7 @@ BOOST_AUTO_TEST_CASE(Performance)
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	auto start_time = std::chrono::steady_clock::now();
 	for (auto& it : frags)
 	{
@@ -184,7 +184,7 @@ BOOST_AUTO_TEST_CASE(Performance)
 	artdaq::Fragment f2(0);
 	f2.setSequenceID(1);
 	artdaq::ContainerFragmentLoader cfl2(f2);
-	cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl2);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl2);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 
 	start_time = std::chrono::steady_clock::now();
 	cfl2.addFragments(frags);
@@ -200,7 +200,7 @@ BOOST_AUTO_TEST_CASE(Exceptions)
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 
 	// Attempting to access a fragment which is not in the container is an exception
 	BOOST_REQUIRE_EXCEPTION(cf->at(0), cet::exception, [&](cet::exception e) { return e.category() == "ArgumentOutOfRange"; });
@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE(AppendFragment)
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	cfl.addFragment(tmpFrag);
 
 	BOOST_REQUIRE_EQUAL(f.dataSizeBytes(), sizeof(artdaq::detail::RawFragmentHeader) + 4 * sizeof(artdaq::Fragment::value_type) + (2 * sizeof(size_t)));
@@ -302,7 +302,7 @@ BOOST_AUTO_TEST_CASE(AppendFragment)
 	BOOST_REQUIRE_EQUAL(static_cast<artdaq::detail::RawFragmentHeader::RawDataType>(newHdr->type), type);
 	BOOST_REQUIRE_EQUAL(static_cast<artdaq::detail::RawFragmentHeader::RawDataType>(newHdr->sequence_id), 1);
 
-	memcpy(newHdr + 1, &fakeData[0], fakeData.size() * sizeof(artdaq::Fragment::value_type));
+	memcpy(newHdr + 1, &fakeData[0], fakeData.size() * sizeof(artdaq::Fragment::value_type));  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	newHdr->fragment_id = 1;
 
 	outfrag = cf->at(1);
@@ -326,7 +326,7 @@ BOOST_AUTO_TEST_CASE(ResizeLastFragment)
 	artdaq::Fragment f(0);
 	f.setSequenceID(1);
 	artdaq::ContainerFragmentLoader cfl(f);
-	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);
+	auto cf = reinterpret_cast<artdaq::ContainerFragment*>(&cfl);  // NOLINT
 	cfl.addFragment(tmpFrag);
 
 	BOOST_REQUIRE_EQUAL(f.dataSizeBytes(), sizeof(artdaq::detail::RawFragmentHeader) + 4 * sizeof(artdaq::Fragment::value_type) + (2 * sizeof(size_t)));
@@ -349,7 +349,7 @@ BOOST_AUTO_TEST_CASE(ResizeLastFragment)
 	BOOST_REQUIRE_EQUAL(static_cast<artdaq::detail::RawFragmentHeader::RawDataType>(newHdr->type), type);
 	BOOST_REQUIRE_EQUAL(static_cast<artdaq::detail::RawFragmentHeader::RawDataType>(newHdr->sequence_id), 1);
 
-	memcpy(newHdr + 1, &fakeData[0], fakeData.size() * sizeof(artdaq::Fragment::value_type));
+	memcpy(newHdr + 1, &fakeData[0], fakeData.size() * sizeof(artdaq::Fragment::value_type));  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	newHdr->fragment_id = 1;
 
 	outfrag = cf->at(1);
@@ -360,7 +360,6 @@ BOOST_AUTO_TEST_CASE(ResizeLastFragment)
 	BOOST_REQUIRE_EQUAL(*(outfrag->dataBegin() + 1), 2);
 
 	cfl.resizeLastFragment(5);
-	newHdr = cfl.lastFragmentHeader();
 	outfrag = cf->at(1);
 	BOOST_REQUIRE_EQUAL(outfrag->sequenceID(), 1);
 	BOOST_REQUIRE_EQUAL(outfrag->fragmentID(), 1);

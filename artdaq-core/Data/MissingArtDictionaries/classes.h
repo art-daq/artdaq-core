@@ -1,2 +1,7 @@
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_MISSINGARTDICTIONARIES_CLASSES_H_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_MISSINGARTDICTIONARIES_CLASSES_H_
+
 #include "canvas/Persistency/Provenance/ProcessHistory.h"
 #include "canvas/Persistency/Provenance/ProcessHistoryID.h"
+
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_MISSINGARTDICTIONARIES_CLASSES_H_

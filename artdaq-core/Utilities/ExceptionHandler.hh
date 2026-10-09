@@ -1,5 +1,5 @@
-#ifndef artdaq_core_Utilities_ExceptionHandler_hh
-#define artdaq_core_Utilities_ExceptionHandler_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_EXCEPTIONHANDLER_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_EXCEPTIONHANDLER_HH_
 
 #include <string>
 
@@ -50,4 +50,4 @@ enum class ExceptionHandlerRethrow
 void ExceptionHandler(ExceptionHandlerRethrow decision, const std::string& optional_message = "");
 }  // namespace artdaq
 
-#endif
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_EXCEPTIONHANDLER_HH_

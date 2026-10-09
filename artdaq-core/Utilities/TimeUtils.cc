@@ -22,7 +22,7 @@ std::string artdaq::TimeUtils::
 	std::string workingString = BPT::to_simple_string(posixTime);
 
 	// now fractional seconds
-	char fractionalString[20];
+	char fractionalString[20];  // NOLINT(modernize-avoid-c-arrays)
 	sprintf(fractionalString, "%06d", static_cast<int32_t>(inputUnixTime.tv_usec));
 	workingString.append(".");
 	workingString.append(fractionalString);
@@ -39,7 +39,7 @@ std::string artdaq::TimeUtils::
 	std::string workingString = BPT::to_simple_string(posixTime);
 
 	// now fractional seconds
-	char fractionalString[20];
+	char fractionalString[20];  // NOLINT(modernize-avoid-c-arrays)
 	sprintf(fractionalString, "%09ld", inputUnixTime.tv_nsec);
 	workingString.append(".");
 	workingString.append(fractionalString);
@@ -71,11 +71,11 @@ double artdaq::TimeUtils::
 double artdaq::TimeUtils::
     convertUnixTimeToSeconds(struct timeval const& inputUnixTime)
 {
-	return static_cast<double>(inputUnixTime.tv_sec) + inputUnixTime.tv_usec / 1000000.0;
+	return static_cast<double>(inputUnixTime.tv_sec) + static_cast<double>(inputUnixTime.tv_usec) / 1000000.0;
 }
 
 double artdaq::TimeUtils::
     convertUnixTimeToSeconds(struct timespec const& inputUnixTime)
 {
-	return static_cast<double>(inputUnixTime.tv_sec) + inputUnixTime.tv_nsec / 1000000000.0;  // Mr. Billion
+	return static_cast<double>(inputUnixTime.tv_sec) + static_cast<double>(inputUnixTime.tv_nsec) / 1000000000.0;  // Mr. Billion
 }

@@ -1,8 +1,9 @@
 #include "artdaq-core/Core/StatisticsCollection.hh"
-#include <iostream>
-#include <utility>
 
 #include "TRACE/tracemf.h"
+
+#include <iostream>
+#include <utility>
 
 namespace artdaq {
 StatisticsCollection& StatisticsCollection::getInstance()
@@ -16,17 +17,17 @@ StatisticsCollection::StatisticsCollection()
 	thread_stop_requested_ = false;
 	try
 	{
-		calculation_thread_ = std::make_unique<boost::thread>(boost::bind(&StatisticsCollection::run, this));
-		char tname[16];                                        // Size 16 - see man page pthread_setname_np(3) and/or prctl(2)
-		snprintf(tname, sizeof(tname) - 1, "%s", "StatColl");  // NOLINT
-		tname[sizeof(tname) - 1] = '\0';                       // assure term. snprintf is not too evil :)
+		calculation_thread_ = std::make_unique<boost::thread>(boost::bind(&StatisticsCollection::run, this));  // NOLINT
+		char tname[16];                                                                                        // NOLINT Size 16 - see man page pthread_setname_np(3) and/or prctl(2)
+		snprintf(tname, sizeof(tname) - 1, "%s", "StatColl");                                                  // NOLINT
+		tname[sizeof(tname) - 1] = '\0';                                                                       // assure term. snprintf is not too evil :)
 		auto handle = calculation_thread_->native_handle();
 		pthread_setname_np(handle, tname);
 	}
 	catch (const boost::exception& e)
 	{
 		TLOG(TLVL_ERROR) << "Caught boost::exception starting Statistics Collection thread: " << boost::diagnostic_information(e) << ", errno=" << errno;
-		std::cerr << "Caught boost::exception starting Statistics Collection thread: " << boost::diagnostic_information(e) << ", errno=" << errno << std::endl;
+		std::cerr << "Caught boost::exception starting Statistics Collection thread: " << boost::diagnostic_information(e) << ", errno=" << errno << std::endl;  // NOLINT
 		exit(5);
 	}
 }
@@ -44,7 +45,7 @@ StatisticsCollection::~StatisticsCollection() noexcept
 			calculation_thread_->join();
 		}
 	}
-	catch (...)
+	catch (...)  // NOLINT
 	{
 		// IGNORED
 	}

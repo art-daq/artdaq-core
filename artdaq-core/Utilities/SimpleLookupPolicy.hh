@@ -1,13 +1,15 @@
-#ifndef artdaq_core_Utilities_SimpleLookupPolicy_h
-#define artdaq_core_Utilities_SimpleLookupPolicy_h
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_SIMPLELOOKUPPOLICY_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_SIMPLELOOKUPPOLICY_HH_
 
-#include <memory>
 #include "cetlib/filepath_maker.h"
 #include "cetlib/search_path.h"
 
+#include <memory>
+#include <string>
+
 namespace artdaq {
 class SimpleLookupPolicy;
-}
+}  // namespace artdaq
 
 /**
  * \brief This class is intended to find files using a set lookup order.
@@ -36,7 +38,7 @@ public:
 	 *
 	 * The SimpleLookupPolicy Constructor instantiates the cet::search_path objects used for file lookup.
 	 */
-	SimpleLookupPolicy(std::string const& paths, ArgType argType = ArgType::ENV_VAR);
+	explicit SimpleLookupPolicy(std::string const& paths, ArgType argType = ArgType::ENV_VAR);
 
 	/**
 	 * \brief Perform the file lookup.
@@ -71,7 +73,7 @@ private:
 	std::unique_ptr<cet::search_path> fallbackPaths_;
 };
 
-#endif /* artdaq_core_Utilities_SimpleLookupPolicy_h */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_SIMPLELOOKUPPOLICY_HH_
 
 // Local Variables:
 // mode: c++

@@ -1,14 +1,12 @@
-#ifndef artdaq_core_Data_MetadataFragment_hh
-#define artdaq_core_Data_MetadataFragment_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_METADATAFRAGMENT_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_METADATAFRAGMENT_HH_
 
 #include "artdaq-core/Data/ArtdaqMetadata.hh"
 #include "artdaq-core/Data/Fragment.hh"
 
 namespace artdaq {
-class MetadataFragment;
-}
 
-class artdaq::MetadataFragment
+class MetadataFragment
 {
 public:
 	explicit MetadataFragment(artdaq::Fragment const& frag)
@@ -23,5 +21,6 @@ public:
 private:
 	artdaq::Fragment const& artdaq_fragment_;
 };
+}  // namespace artdaq
 
-#endif
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_METADATAFRAGMENT_HH_

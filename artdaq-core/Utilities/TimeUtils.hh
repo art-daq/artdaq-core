@@ -1,15 +1,11 @@
-#ifndef artdaq_core_Utilities_TimeUtils_h
-#define artdaq_core_Utilities_TimeUtils_h
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_TIMEUTILS_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_TIMEUTILS_HH_
 
 #include <sys/time.h>
 #include <chrono>
 #include <string>
 
-namespace artdaq {
-/**
- * \brief Namespace to hold useful time-converting functions
- */
-namespace TimeUtils {
+namespace artdaq::TimeUtils {
 /**
  * We shall use artdaq::detail::seconds as our "standard" duration
  * type. Note that this differs from std::chrono::seconds, which has
@@ -70,7 +66,7 @@ struct timespec get_realtime_clock();
 /// <returns>Elapseed time between then and now as double, in seconds</returns>
 inline constexpr double GetElapsedTime(struct timespec const& then, struct timespec now = get_realtime_clock())
 {
-	return now.tv_sec - then.tv_sec + ((now.tv_nsec - then.tv_nsec) / 1000000000.0);
+	return static_cast<double>(now.tv_sec - then.tv_sec) + (static_cast<double>(now.tv_nsec - then.tv_nsec) / 1000000000.0);
 }
 
 /**
@@ -120,10 +116,10 @@ double convertUnixTimeToSeconds(struct timeval const& inputUnixTime);
  * \return double representation of Unix time (in seconds)
  */
 double convertUnixTimeToSeconds(struct timespec const& inputUnixTime);
-}  // namespace TimeUtils
-}  // namespace artdaq
 
-#endif /* artdaq_core_Utilities_TimeUtils_h */
+}  // namespace artdaq::TimeUtils
+
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_TIMEUTILS_HH_
 
 // Local Variables:
 // mode: c++

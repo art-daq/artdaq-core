@@ -1,5 +1,15 @@
-#ifndef artdaq_core_Data_Fragment_hh
-#define artdaq_core_Data_Fragment_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_FRAGMENT_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_FRAGMENT_HH_
+
+#include "artdaq-core/Core/QuickVec.hh"
+#include "artdaq-core/Data/detail/RawFragmentHeader.hh"
+#include "artdaq-core/Data/detail/RawFragmentHeaderV0.hh"
+#include "artdaq-core/Data/detail/RawFragmentHeaderV1.hh"
+#include "artdaq-core/Data/dictionarycontrol.hh"
+
+#if HIDE_FROM_ROOT
+#include "TRACE/trace.h"  // TRACE
+#endif
 
 #include <algorithm>
 // #include <cassert>
@@ -8,26 +18,21 @@
 #include <cstdint>
 #include <cstring>
 #include <iosfwd>
+#include <iostream>
 #include <iterator>
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
-
-#include <iostream>
-#include "artdaq-core/Core/QuickVec.hh"
-#include "artdaq-core/Data/detail/RawFragmentHeader.hh"
-#include "artdaq-core/Data/detail/RawFragmentHeaderV0.hh"
-#include "artdaq-core/Data/detail/RawFragmentHeaderV1.hh"
-#include "artdaq-core/Data/dictionarycontrol.hh"
-#if HIDE_FROM_ROOT
-#include "TRACE/trace.h"  // TRACE
-#endif
 
 /**
  * \brief The artdaq namespace.
  */
 namespace artdaq {
+// NOLINTNEXTLINE(build/define_used)
 #define DATAVEC_T QuickVec<RawDataType>
 // #define DATAVEC_T std::vector<RawDataType>
 
@@ -515,12 +520,12 @@ public:
 	 *
 	 * Please note that for this const-version, you'll need the const-
 	 * qualifier to the pointer you pass as a parameter (i.e.,
-	 * reinterpret_cast_checked<const PtrType*>, not reinterpret_cast_checked<PtrType*>)
+	 * reinterpret_checked<const PtrType*>, not reinterpret_checked<PtrType*>)
 	 */
 	template<typename T>
-	T reinterpret_cast_checked(const RawDataType* in) const
+	T reinterpret_checked(const RawDataType* in) const
 	{
-		T newpointer = reinterpret_cast<T>(in);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		T newpointer = reinterpret_cast<T>(in);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 
 		if (static_cast<const void*>(newpointer) != static_cast<const void*>(in))
 		{
@@ -546,9 +551,9 @@ public:
 	 * function and added a check just to be completely safe.
 	 */
 	template<typename T>
-	T reinterpret_cast_checked(RawDataType* in)
+	T reinterpret_checked(RawDataType* in)
 	{
-		T newpointer = reinterpret_cast<T>(in);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		T newpointer = reinterpret_cast<T>(in);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 
 		if (static_cast<void*>(newpointer) != static_cast<void*>(in))
 		{
@@ -566,7 +571,7 @@ public:
 	 * than an iterator is that we don't need to take the address of the
 	 * dereferenced iterator (e.g., via &*dataBegin() ) to get ahold of the memory
 	 */
-	byte_t* dataBeginBytes() { return reinterpret_cast_checked<byte_t*>(&*dataBegin()); }
+	byte_t* dataBeginBytes() { return reinterpret_checked<byte_t*>(&*dataBegin()); }
 
 	/**
 	 * \brief Return Fragment::byte_t* pointing at the end of the payload
@@ -576,7 +581,7 @@ public:
 	 * than an iterator is that we don't need to take the address of the
 	 * dereferenced iterator (e.g., via &*dataEnd() ) to get ahold of the memory
 	 */
-	byte_t* dataEndBytes() { return reinterpret_cast_checked<byte_t*>(&*dataEnd()); }
+	byte_t* dataEndBytes() { return reinterpret_checked<byte_t*>(&*dataEnd()); }
 
 	/**
 	 * \brief Return an iterator to the beginning of the header (should be used
@@ -589,7 +594,7 @@ public:
 	 * \brief Return a Fragment::byte_t pointer pointing to the beginning of the header
 	 * \return byte_t pointer to the beginning of the header
 	 */
-	byte_t* headerBeginBytes() { return reinterpret_cast_checked<byte_t*>(&*headerBegin()); }
+	byte_t* headerBeginBytes() { return reinterpret_checked<byte_t*>(&*headerBegin()); }
 
 	/**
 	 * \brief Returns a const_iterator to the beginning of the data payload
@@ -613,7 +618,7 @@ public:
 	 */
 	const byte_t* dataBeginBytes() const
 	{
-		return reinterpret_cast_checked<const byte_t*>(&*dataBegin());
+		return reinterpret_checked<const byte_t*>(&*dataBegin());
 	}
 
 	/**
@@ -626,7 +631,7 @@ public:
 	 */
 	const byte_t* dataEndBytes() const
 	{
-		return reinterpret_cast_checked<const byte_t*>(&*dataEnd());
+		return reinterpret_checked<const byte_t*>(&*dataEnd());
 	}
 
 	/**
@@ -642,7 +647,7 @@ public:
 	 */
 	const byte_t* headerBeginBytes() const
 	{
-		return reinterpret_cast_checked<const byte_t*>(&*headerBegin());
+		return reinterpret_checked<const byte_t*>(&*headerBegin());
 	}
 
 	/**
@@ -741,11 +746,10 @@ public:
 	 * \brief Get a copy of the RawFragmentHeader from this Fragment
 	 * \return Copy of the RawFragmentHeader of this Fragment, upgraded to the latest version
 	 */
-	detail::RawFragmentHeader const fragmentHeader() const;
+	detail::RawFragmentHeader fragmentHeader() const;
 
 	~Fragment()
 	{
-		if (upgraded_header_ != nullptr) delete upgraded_header_;
 	}
 #endif
 
@@ -759,7 +763,7 @@ private:
 
 #if HIDE_FROM_ROOT
 
-	mutable detail::RawFragmentHeader* upgraded_header_{nullptr};
+	mutable std::unique_ptr<detail::RawFragmentHeader> upgraded_header_{nullptr};
 	mutable std::atomic<bool> header_check_{false};
 
 	detail::RawFragmentHeader* fragmentHeaderPtr() const;
@@ -772,20 +776,21 @@ private:
 // http://stackoverflow.com/questions/33939687
 // This should generate an exception if artdaq::Fragment is not move-constructible
 inline artdaq::Fragment::Fragment(artdaq::Fragment&& of) noexcept
-    : vals_(std::move(of.vals_)), upgraded_header_(of.upgraded_header_)
+    : vals_(std::move(of.vals_)), upgraded_header_(std::move(of.upgraded_header_))
 {
-	of.upgraded_header_ = nullptr;
+	of.upgraded_header_.reset(nullptr);
 }
 inline artdaq::Fragment& artdaq::Fragment::operator=(artdaq::Fragment&& of) noexcept
 {
 	vals_ = std::move(of.vals_);
-	upgraded_header_ = of.upgraded_header_;
-	of.upgraded_header_ = nullptr;
+	upgraded_header_ = std::move(of.upgraded_header_);
+	of.upgraded_header_.reset(nullptr);
 	return *this;
 }
 
 inline artdaq::Fragment::Fragment(const artdaq::Fragment& f)
     : vals_(f.vals_), upgraded_header_(nullptr) {}
+
 inline artdaq::Fragment& artdaq::Fragment::operator=(const artdaq::Fragment& f)
 {
 	vals_ = f.vals_;
@@ -839,6 +844,7 @@ artdaq::Fragment::
 	                  sizeof(decltype(std::numeric_limits<detail::RawFragmentHeader::metadata_word_count_t>::max())),
 	              "metadata_word_count_t is too big!");
 
+	// NOLINTNEXTLINE
 	static size_t constexpr max_md_wc =
 	    std::numeric_limits<detail::RawFragmentHeader::metadata_word_count_t>::max();
 	size_t requested_md_wc =
@@ -865,8 +871,7 @@ artdaq::Fragment::
 {
 	TRACEN("Fragment", 50, "Fragment ctor num_word()=%zu MetadataSize_=%zu payload_size=%zu", artdaq::detail::RawFragmentHeader::num_words(), validatedMetadataSize_<T>(), payload_size);  // NOLINT
 	// vals ctor w/o init val is used; make sure header is ALL initialized.
-	for (iterator ii = vals_.begin();
-	     ii != (vals_.begin() + detail::RawFragmentHeader::num_words()); ++ii)
+	for (iterator ii = vals_.begin(); ii != (vals_.begin() + detail::RawFragmentHeader::num_words()); ++ii)
 	{
 		*ii = -1;
 	}
@@ -895,7 +900,7 @@ artdaq::Fragment::size() const
 inline artdaq::Fragment::version_t
 artdaq::Fragment::version() const
 {
-	auto hdr = reinterpret_cast_checked<detail::RawFragmentHeader const*>(&vals_[0]);
+	auto hdr = reinterpret_checked<detail::RawFragmentHeader const*>(&vals_[0]);
 	return hdr->version;
 }
 
@@ -1007,7 +1012,7 @@ T* artdaq::Fragment::metadata()
 		    << "No metadata has been stored in this Fragment.";
 	}
 
-	return reinterpret_cast_checked<T*>(&vals_[headerSizeWords()]);
+	return reinterpret_checked<T*>(&vals_[headerSizeWords()]);
 }
 
 template<class T>
@@ -1019,7 +1024,7 @@ artdaq::Fragment::metadata() const
 		throw cet::exception("InvalidRequest")  // NOLINT(cert-err60-cpp)
 		    << "No metadata has been stored in this Fragment.";
 	}
-	return reinterpret_cast_checked<T const*>(&vals_[headerSizeWords()]);
+	return reinterpret_checked<T const*>(&vals_[headerSizeWords()]);
 }
 
 template<class T>
@@ -1095,10 +1100,10 @@ artdaq::Fragment::resizeBytesWithCushion(std::size_t szbytes, double growthFacto
 inline void
 artdaq::Fragment::resizeBytes(std::size_t szbytes, byte_t v)
 {
-	RawDataType defaultval;
-	auto ptr = reinterpret_cast_checked<byte_t*>(&defaultval);
+	RawDataType defaultval{0};
+	auto ptr = reinterpret_checked<byte_t*>(&defaultval);
 
-	for (uint8_t i = 0; i < sizeof(RawDataType); ++i)
+	for (size_t i = 0; i < sizeof(RawDataType); ++i)
 	{
 		*ptr = v;
 		ptr++;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -1208,7 +1213,7 @@ artdaq::Fragment::headerAddress()
 inline size_t
 artdaq::Fragment::headerSizeWords() const
 {
-	auto hdr = reinterpret_cast_checked<detail::RawFragmentHeader const*>(&vals_[0]);
+	auto hdr = reinterpret_checked<detail::RawFragmentHeader const*>(&vals_[0]);
 	if (hdr->version != detail::RawFragmentHeader::CurrentVersion)
 	{
 		switch (hdr->version)
@@ -1237,24 +1242,24 @@ artdaq::Fragment::headerSizeWords() const
 inline artdaq::detail::RawFragmentHeader*
 artdaq::Fragment::fragmentHeaderPtr() const
 {
-	if (upgraded_header_ != nullptr) return upgraded_header_;
-	auto hdr = reinterpret_cast_checked<detail::RawFragmentHeader const*>(&vals_[0]);
+	if (upgraded_header_ != nullptr) return upgraded_header_.get();
+	auto hdr = reinterpret_checked<detail::RawFragmentHeader const*>(&vals_[0]);
 	if (!header_check_.load() && hdr->version != detail::RawFragmentHeader::CurrentVersion)
 	{
 		switch (hdr->version)
 		{
 			case 0: {
 				TLOG(52, "Fragment") << "Upgrading RawFragmentHeaderV0 (non const)";
-				auto old_hdr = reinterpret_cast_checked<detail::RawFragmentHeaderV0 const*>(&vals_[0]);
-				upgraded_header_ = new detail::RawFragmentHeader(old_hdr->upgrade());
-				return upgraded_header_;
+				auto old_hdr = reinterpret_checked<detail::RawFragmentHeaderV0 const*>(&vals_[0]);
+				upgraded_header_.reset(new detail::RawFragmentHeader(old_hdr->upgrade()));
+				return upgraded_header_.get();
 				break;
 			}
 			case 1: {
 				TLOG(52, "Fragment") << "Upgrading RawFragmentHeaderV1 (non const)";
-				auto old_hdr = reinterpret_cast_checked<detail::RawFragmentHeaderV1 const*>(&vals_[0]);
-				upgraded_header_ = new detail::RawFragmentHeader(old_hdr->upgrade());
-				return upgraded_header_;
+				auto old_hdr = reinterpret_checked<detail::RawFragmentHeaderV1 const*>(&vals_[0]);
+				upgraded_header_.reset(new detail::RawFragmentHeader(old_hdr->upgrade()));
+				return upgraded_header_.get();
 				break;
 			}
 			case 0xFFFF:
@@ -1267,10 +1272,10 @@ artdaq::Fragment::fragmentHeaderPtr() const
 	}
 
 	header_check_ = true;
-	return const_cast<detail::RawFragmentHeader*>(hdr);
+	return const_cast<detail::RawFragmentHeader*>(hdr);  // NOLINT
 }
 
-inline artdaq::detail::RawFragmentHeader const
+inline artdaq::detail::RawFragmentHeader
 artdaq::Fragment::fragmentHeader() const
 {
 	return *fragmentHeaderPtr();
@@ -1288,6 +1293,6 @@ artdaq::operator<<(std::ostream& os, artdaq::Fragment const& f)
 	f.print(os);
 	return os;
 }
-#endif /* HIDE_FROM_ROOT */
+#endif  // HIDE_FROM_ROOT
 
-#endif /* artdaq_core_Data_Fragment_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_FRAGMENT_HH_

@@ -1,14 +1,15 @@
-#ifndef artdaq_core_Plugins_GeneratorMacros_hh
-#define artdaq_core_Plugins_GeneratorMacros_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_GENERATORMACROS_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_GENERATORMACROS_HH_
 
 #include "artdaq-core/Plugins/FragmentGenerator.hh"
 
-namespace fhicl {
-class ParameterSet;
-}
+#include "cetlib/compiler_macros.h"
 
 #include <memory>
-#include "cetlib/compiler_macros.h"
+
+namespace fhicl {
+class ParameterSet;
+}  // namespace fhicl
 
 namespace artdaq {
 /**
@@ -20,15 +21,12 @@ typedef std::unique_ptr<artdaq::FragmentGenerator> makeFunc_t(fhicl::ParameterSe
 }  // namespace artdaq
 
 #ifndef EXTERN_C_FUNC_DECLARE_START
+// NOLINTNEXTLINE(build/define_used)
 #define EXTERN_C_FUNC_DECLARE_START extern "C" {
 #endif
 
+// NOLINTNEXTLINE(build/define_used)
 #define DEFINE_ARTDAQ_GENERATOR(klass)                                    \
-	/** \brief Function exposed by plugin library to allow external       \
-	 * code to construct instances of klass.                              \
-	 * \param ps Parameter set for initializing the klass                 \
-	 * \return A smart pointer to the klass                               \
-	 */                                                                   \
 	EXTERN_C_FUNC_DECLARE_START                                           \
 	std::unique_ptr<artdaq::FragmentGenerator>                            \
 	make(fhicl::ParameterSet const& ps)                                   \
@@ -37,4 +35,4 @@ typedef std::unique_ptr<artdaq::FragmentGenerator> makeFunc_t(fhicl::ParameterSe
 	}                                                                     \
 	}
 
-#endif /* artdaq_core_Plugins_GeneratorMacros_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_GENERATORMACROS_HH_

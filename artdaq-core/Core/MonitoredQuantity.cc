@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 using namespace artdaq;
 
@@ -56,13 +57,13 @@ bool MonitoredQuantity::calculateStatistics(TIME_POINT_T currentTime)
 	// create local copies of the working values to minimize the
 	// time that we could block a thread trying to add a sample.
 	// Also, reset the working values.
-	size_t latestSampleCount;
-	double latestValueSum;
-	double latestValueSumOfSquares;
-	double latestValueMin;
-	double latestValueMax;
-	DURATION_T latestDuration;
-	double latestLastLatchedSampleValue;
+	size_t latestSampleCount = 0;
+	double latestValueSum = 0.0;
+	double latestValueSumOfSquares = 0.0;
+	double latestValueMin = std::numeric_limits<double>::max();
+	double latestValueMax = std::numeric_limits<double>::lowest();
+	DURATION_T latestDuration = 0;
+	double latestLastLatchedSampleValue = 0;
 	{
 		boost::mutex::scoped_lock sl(_accumulationMutex);
 		latestSampleCount = _workingSampleCount;
@@ -76,8 +77,8 @@ bool MonitoredQuantity::calculateStatistics(TIME_POINT_T currentTime)
 		_workingSampleCount = 0;
 		_workingValueSum = 0.0;
 		_workingValueSumOfSquares = 0.0;
-		_workingValueMin = INFINITY;
-		_workingValueMax = -INFINITY;
+		_workingValueMin = std::numeric_limits<double>::max();
+		_workingValueMax = std::numeric_limits<double>::lowest();
 	}
 	// lock out any interaction with the results while we update them
 	{
@@ -111,8 +112,8 @@ bool MonitoredQuantity::calculateStatistics(TIME_POINT_T currentTime)
 		recentSampleCount = 0;
 		recentValueSum = 0.0;
 		recentValueSumOfSquares = 0.0;
-		recentValueMin = INFINITY;
-		recentValueMax = -INFINITY;
+		recentValueMin = std::numeric_limits<double>::max();
+		recentValueMax = std::numeric_limits<double>::lowest();
 		recentDuration = 0.0;
 		for (unsigned int idx = 0; idx < _binCount; ++idx)
 		{
@@ -198,7 +199,7 @@ bool MonitoredQuantity::calculateStatistics(TIME_POINT_T currentTime)
 		}
 	}
 	return true;
-}
+}  // NOLINT(readability/fn_size)
 
 void MonitoredQuantity::_reset_accumulators()
 {
@@ -206,8 +207,8 @@ void MonitoredQuantity::_reset_accumulators()
 	_workingSampleCount = 0;
 	_workingValueSum = 0.0;
 	_workingValueSumOfSquares = 0.0;
-	_workingValueMin = INFINITY;
-	_workingValueMax = -INFINITY;
+	_workingValueMin = std::numeric_limits<double>::max();
+	_workingValueMax = std::numeric_limits<double>::lowest();
 	_workingLastSampleValue = 0;
 }
 
@@ -219,8 +220,8 @@ void MonitoredQuantity::_reset_results()
 		recentBinnedSampleCounts[idx] = 0;
 		recentBinnedValueSums[idx] = 0.0;
 		_binValueSumOfSquares[idx] = 0.0;
-		_binValueMin[idx] = INFINITY;
-		_binValueMax[idx] = -INFINITY;
+		_binValueMin[idx] = std::numeric_limits<double>::max();
+		_binValueMax[idx] = std::numeric_limits<double>::lowest();
 		recentBinnedDurations[idx] = 0.0;
 		recentBinnedEndTimes[idx] = 0.0;
 	}
@@ -230,8 +231,8 @@ void MonitoredQuantity::_reset_results()
 	fullValueSumOfSquares = 0.0;
 	fullValueAverage = 0.0;
 	fullValueRMS = 0.0;
-	fullValueMin = INFINITY;
-	fullValueMax = -INFINITY;
+	fullValueMin = std::numeric_limits<double>::max();
+	fullValueMax = std::numeric_limits<double>::lowest();
 	fullValueRate = 0.0;
 	fullDuration = 0.0;
 	recentSampleCount = 0;
@@ -240,8 +241,8 @@ void MonitoredQuantity::_reset_results()
 	recentValueSumOfSquares = 0.0;
 	recentValueAverage = 0.0;
 	recentValueRMS = 0.0;
-	recentValueMin = INFINITY;
-	recentValueMax = -INFINITY;
+	recentValueMin = std::numeric_limits<double>::max();
+	recentValueMax = std::numeric_limits<double>::lowest();
 	recentValueRate = 0.0;
 	recentDuration = 0.0;
 	lastSampleValue = 0.0;

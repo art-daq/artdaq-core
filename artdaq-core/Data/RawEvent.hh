@@ -1,5 +1,5 @@
-#ifndef artdaq_core_Data_RawEvent_hh
-#define artdaq_core_Data_RawEvent_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_RAWEVENT_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_RAWEVENT_HH_
 
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/dictionarycontrol.hh"
@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <memory>
 #include <ostream>
+#include <utility>
+#include <vector>
 
 namespace artdaq {
 /**
@@ -339,4 +341,4 @@ inline std::ostream& operator<<(std::ostream& os, RawEvent const& ev)
 #endif
 }  // namespace artdaq
 
-#endif /* artdaq_core_Data_RawEvent_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_RAWEVENT_HH_

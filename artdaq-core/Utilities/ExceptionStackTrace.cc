@@ -12,8 +12,8 @@
 #include "ExceptionStackTrace.hh"
 
 namespace artdaq::debug {
-#define SKIP_HEAD 2
-#define SKIP_TAIL 3
+constexpr int SKIP_HEAD = 2;
+constexpr int SKIP_TAIL = 3;
 
 StackTraceCollector& getStackTraceCollector()
 {
@@ -23,7 +23,7 @@ StackTraceCollector& getStackTraceCollector()
 
 std::string StackTrace::demangle(std::string const& symbol)
 {
-	int status;
+	int status = 0;
 	std::unique_ptr<char, void (*)(void*)> demangled_symbol(abi::__cxa_demangle(symbol.c_str(), nullptr, nullptr, &status), &std::free);
 	return status != 0 ? symbol : &*demangled_symbol;
 }
@@ -46,12 +46,12 @@ void Trace::resolve()
 	{
 		filename_ = m[1];
 		function_ = m[2];
-		address_ = static_cast<uintptr_t>(stoull(m[3], 0, 16));
+		address_ = static_cast<uintptr_t>(stoull(m[3], nullptr, 16));
 		if (std::regex_search(function_, m, std::regex{"(\\S+)\\+(\\S+)"}) && m.size() == 3)
 		{
 			std::string offstr = m[2];
 			function_ = StackTrace::demangle(m[1]);
-			offset_ = static_cast<uintptr_t>(stoull(offstr, 0, 16));
+			offset_ = static_cast<uintptr_t>(stoull(offstr, nullptr, 16));
 		}
 	}
 	else  // slow parse
@@ -63,10 +63,10 @@ void Trace::resolve()
 			function_ = StackTrace::demangle(m[1]);
 
 		if (std::regex_search(symbol_, m, std::regex{"[+](0x\\S+)\\)"}) && m.size() == 2)
-			offset_ = static_cast<uintptr_t>(stoull(m[1], 0, 16));
+			offset_ = static_cast<uintptr_t>(stoull(m[1], nullptr, 16));
 
 		if (std::regex_search(symbol_, m, std::regex{"\\[(0x\\S+)\\]"}) && m.size() == 2)
-			address_ = static_cast<uintptr_t>(stoull(m[1], 0, 16));
+			address_ = static_cast<uintptr_t>(stoull(m[1], nullptr, 16));
 	}
 }
 
@@ -87,9 +87,9 @@ void StackTrace::resolve()
 	char** symbols = ::backtrace_symbols(frames_, size_);
 
 	for (auto i = SKIP_HEAD; i < size_ - SKIP_TAIL; i++)
-		traces_uptr_->emplace_back(size_ - SKIP_TAIL - i, symbols[size_ - i - 1]);
+		traces_uptr_->emplace_back(size_ - SKIP_TAIL - i, symbols[size_ - i - 1]);  // NOLINT
 
-	free(symbols);
+	free(symbols);  // NOLINT
 
 	for (auto& trace : *traces_uptr_)
 		trace.resolve();
@@ -102,7 +102,7 @@ std::string StackTrace::print() const
 
 	if (0 == size_)
 	{
-		std::cout << "Error: possibly corrupt stack.";
+		std::cout << "Error: possibly corrupt stack.";  // NOLINT
 	}
 	std::ostringstream os;
 	os << "Caught a \"" << StackTrace::demangle(type_name_) << "\" exception.\n";
@@ -123,7 +123,7 @@ void __cxa_throw(void* ex, void* info, void (*dest)(void*))
 {
 	artdaq::debug::getStackTraceCollector().collect_stacktrace(static_cast<std::type_info*>(info)->name());
 
-	__cxa_throw_t* rethrow __attribute__((noreturn)) = (__cxa_throw_t*)dlsym(RTLD_NEXT, "__cxa_throw");
+	__cxa_throw_t* rethrow __attribute__((noreturn)) = (__cxa_throw_t*)dlsym(RTLD_NEXT, "__cxa_throw");  // NOLINT
 
 	rethrow(ex, info, dest);
 }
@@ -132,7 +132,7 @@ __attribute__((noreturn)) void __cxa_throw(void* ex, std::type_info* info, void 
 {
 	artdaq::debug::getStackTraceCollector().collect_stacktrace(info->name());
 
-	auto* rethrow = (__cxa_throw_t*)dlsym(RTLD_NEXT, "__cxa_throw");
+	auto* rethrow = (__cxa_throw_t*)dlsym(RTLD_NEXT, "__cxa_throw");  // NOLINT
 
 	rethrow(ex, info, dest);
 }

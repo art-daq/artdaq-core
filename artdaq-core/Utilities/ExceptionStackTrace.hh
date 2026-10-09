@@ -1,11 +1,12 @@
-#ifndef EXCEPTIONSTACKTRACE_H
-#define EXCEPTIONSTACKTRACE_H
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_EXCEPTIONSTACKTRACE_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_EXCEPTIONSTACKTRACE_HH_
 
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 extern "C" {
@@ -14,12 +15,12 @@ extern "C" {
  * \brief Overloads _cxa_throw and captures stack frames within the context of the thrown exception
  */
 #ifndef __clang__
-typedef void(__cxa_throw_t)(void*, void*, void (*)(void*));
-void __cxa_throw(void*, void*, void (*)(void*));
-#else   //__clang__
-typedef __attribute__((noreturn)) void(__cxa_throw_t)(void*, std::type_info*, void (*)(void*));
-__attribute__((noreturn)) void __cxa_throw(void*, std::type_info*, void (*)(void*));
-#endif  //__clang__
+typedef void(__cxa_throw_t)(void*, void*, void (*)(void*));  // NOLINT
+void __cxa_throw(void*, void*, void (*)(void*));             // NOLINT
+#else                                                        //__clang__
+typedef __attribute__((noreturn)) void(__cxa_throw_t)(void*, std::type_info*, void (*)(void*));  // NOLINT
+__attribute__((noreturn)) void __cxa_throw(void*, std::type_info*, void (*)(void*));             // NOLINT
+#endif                                                       //__clang__
 }
 
 namespace artdaq::debug {
@@ -143,7 +144,7 @@ private:
 	/**
 	 * \brief Actual stack frames captured by the oveloaded "__cxa_throw" function
 	 */
-	void* frames_[1024];
+	void* frames_[1024];  // NOLINT
 };
 
 inline std::ostream& operator<<(std::ostream& os, StackTrace const& stack_trace)
@@ -194,7 +195,7 @@ public:
 			stack_trace.resolve();
 			return stack_trace.print();
 		}
-		catch (...)
+		catch (...)  // NOLINT
 		{
 			return "Error: possibly corrupt stack.";
 		}
@@ -214,4 +215,4 @@ private:
 
 StackTraceCollector& getStackTraceCollector();
 }  // namespace artdaq::debug
-#endif /* #ifndef  EXCEPTIONSTACKTRACE_H*/
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_EXCEPTIONSTACKTRACE_HH_

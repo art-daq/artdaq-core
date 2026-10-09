@@ -24,8 +24,7 @@ artdaq::Fragment::Fragment(std::size_t n)
     : vals_(n + RawFragmentHeader::num_words())
 {
 	// vals ctor w/o init val is used; make sure header is ALL initialized.
-	for (iterator ii = vals_.begin();
-	     ii != (vals_.begin() + RawFragmentHeader::num_words()); ++ii)
+	for (iterator ii = vals_.begin(); ii != (vals_.begin() + RawFragmentHeader::num_words()); ++ii)
 	{
 		*ii = -1;
 	}

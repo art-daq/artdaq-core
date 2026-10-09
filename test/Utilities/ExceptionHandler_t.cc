@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_SUITE(ExceptionHandler_test)
 
 typedef boost::error_info<struct tag_my_info, std::string> my_info;
 
-struct my_error : virtual boost::exception, virtual std::exception
+struct my_error : virtual boost::exception, virtual std::exception  // NOLINT
 {};
 
 BOOST_AUTO_TEST_CASE(artException)
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(boostException)
 {
 	try
 	{
-		throw my_error() << my_info("TestException");
+		throw my_error() << my_info("TestException");  // NOLINT
 	}
 	catch (boost::exception&)
 	{
@@ -73,9 +73,9 @@ BOOST_AUTO_TEST_CASE(arbitraryThrow)
 {
 	try
 	{
-		throw int(5);
+		throw static_cast<int>(5);  // NOLINT
 	}
-	catch (...)
+	catch (...)  // NOLINT
 	{
 		artdaq::ExceptionHandler(artdaq::ExceptionHandlerRethrow::no, "This is a test of arbitrary throw handling");
 		BOOST_REQUIRE_EXCEPTION(

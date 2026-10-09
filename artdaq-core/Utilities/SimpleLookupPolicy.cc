@@ -1,7 +1,11 @@
-#include <memory>
+
 
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
+
 #include "cetlib/filesystem.h"
+
+#include <memory>
+#include <string>
 
 artdaq::SimpleLookupPolicy::
     SimpleLookupPolicy(std::string const& paths, ArgType argType)
@@ -51,7 +55,7 @@ std::string artdaq::SimpleLookupPolicy::operator()(std::string const& filename)
 	{
 		return cwdPath_->find_file(filename);
 	}
-	catch (...)
+	catch (...)  // NOLINT
 	{}
 
 	return fallbackPaths_->find_file(filename);

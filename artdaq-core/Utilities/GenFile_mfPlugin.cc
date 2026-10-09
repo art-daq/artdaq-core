@@ -2,8 +2,6 @@
 #include "TRACE/tracemf.h"
 #define TRACE_NAME "GenFileOutput"
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <fstream>
 #include "cetlib/PluginTypeDeducer.h"
 #include "cetlib/ProvideMakePluginMacros.h"
 #include "cetlib/ostream_handle.h"
@@ -12,6 +10,9 @@
 #include "messagefacility/MessageService/ELdestination.h"
 #include "messagefacility/Utilities/ELseverityLevel.h"
 #include "messagefacility/Utilities/exception.h"
+
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <fstream>
 
 namespace mfplugins {
 using mf::ErrorObj;
@@ -75,7 +76,6 @@ public:
 	/// Used for ParameterSet validation
 	using Parameters = fhicl::WrappedTable<Config>;
 
-public:
 	/**
 	 * \brief ELGenFileOutput Constructor
 	 * \param pset Validated ParameterSet used to configure GenFileOutput
@@ -138,7 +138,7 @@ ELGenFileOutput::ELGenFileOutput(Parameters const& pset)
 	// Get Host name
 	if (filePattern.find("%H") != std::string::npos || filePattern.find("%?H") != std::string::npos)
 	{
-		char hostname[256];
+		char hostname[256];  // NOLINT(modernize-avoid-c-arrays)
 		if (gethostname(&hostname[0], 256) == 0)
 		{
 			std::string tmpString(hostname);
@@ -156,11 +156,11 @@ ELGenFileOutput::ELGenFileOutput(Parameters const& pset)
 	}
 	if (filePattern.find("%t") != std::string::npos)
 	{
-		time_t rawtime;
-		struct tm* timeinfo;
-		char timeBuffC[256];
+		time_t rawtime{0};
+		struct tm* timeinfo{nullptr};
+		char timeBuffC[256];  // NOLINT(modernize-avoid-c-arrays)
 		time(&rawtime);
-		timeinfo = localtime(&rawtime);
+		timeinfo = localtime(&rawtime);  // NOLINT
 		strftime(timeBuffC, 256, timePattern.c_str(), timeinfo);
 		timeBuff = std::string(timeBuffC);
 	}
@@ -249,7 +249,7 @@ ELGenFileOutput::ELGenFileOutput(Parameters const& pset)
 	TLOG(TLVL_DEBUG + 32) << "fileName is: " << fileName;
 
 	output_ = std::make_unique<cet::ostream_handle>(fileName.c_str(), append ? std::ios::app : std::ios::trunc);
-}
+}  // NOLINT(readability/fn_size)
 
 //======================================================================
 // Message router ( overriddes ELdestination::routePayload )
