@@ -225,7 +225,7 @@ public:
 		if (IsValid() && !registered_reader_)
 		{
 			shm_ptr_->reader_mask |= (static_cast<uint64_t>(1) << manager_id_);
-			shm_ptr_->manager_pids[manager_id_] = getpid();
+			shm_ptr_->manager_pids[manager_id_] = getpid();  // NOLINT
 			registered_reader_ = true;
 		}
 	}
@@ -235,7 +235,7 @@ public:
 		if (IsValid() && !registered_writer_)
 		{
 			shm_ptr_->writer_mask |= (static_cast<uint64_t>(1) << manager_id_);
-			shm_ptr_->manager_pids[manager_id_] = getpid();
+			shm_ptr_->manager_pids[manager_id_] = getpid();  // NOLINT
 			registered_writer_ = true;
 		}
 	}
@@ -247,7 +247,7 @@ public:
 			if (manager_id == 0 && registered_reader_)
 			{
 				shm_ptr_->reader_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
-				shm_ptr_->manager_pids[manager_id_] = 0;
+				shm_ptr_->manager_pids[manager_id_] = 0;  // NOLINT
 				registered_reader_ = false;
 			}
 			else if (manager_id != 0 && manager_id_ == 0)
@@ -264,7 +264,7 @@ public:
 			if (manager_id == 0 && registered_writer_)
 			{
 				shm_ptr_->writer_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
-				shm_ptr_->manager_pids[manager_id_] = 0;
+				shm_ptr_->manager_pids[manager_id_] = 0;  // NOLINT
 				registered_writer_ = false;
 			}
 			else if (manager_id != 0 && manager_id_ == 0)
@@ -503,7 +503,7 @@ private:
 		size_t next_sequence_id;
 		bool destructive_read_mode;
 
-		pid_t manager_pids[64];
+		pid_t manager_pids[64];  // NOLINT(modernize-avoid-c-arrays)
 		std::atomic<uint64_t> writer_mask;
 		std::atomic<uint64_t> reader_mask;
 
