@@ -210,7 +210,7 @@ public:
 	 * \brief Get the number of attached SharedMemoryManagers
 	 * \return The number of attached SharedMemoryManagers
 	 */
-	uint16_t GetAttachedCount() const;
+	uint16_t GetAttachedCount();
 
 	/**
 	 * \brief Reset the attached manager count to 0
@@ -225,6 +225,7 @@ public:
 		if (IsValid() && !registered_reader_)
 		{
 			shm_ptr_->reader_mask |= (static_cast<uint64_t>(1) << manager_id_);
+			shm_ptr_->manager_pids[manager_id_] = getpid();
 			registered_reader_ = true;
 		}
 	}
@@ -234,25 +235,42 @@ public:
 		if (IsValid() && !registered_writer_)
 		{
 			shm_ptr_->writer_mask |= (static_cast<uint64_t>(1) << manager_id_);
+			shm_ptr_->manager_pids[manager_id_] = getpid();
 			registered_writer_ = true;
 		}
 	}
 
-	void UnregisterReader()
+	void UnregisterReader(int manager_id = 0)
 	{
-		if (IsValid() && registered_reader_)
+		if (IsValid())
 		{
-			shm_ptr_->reader_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
-			registered_reader_ = false;
+			if (manager_id == 0 && registered_reader_)
+			{
+				shm_ptr_->reader_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
+				shm_ptr_->manager_pids[manager_id_] = 0;
+				registered_reader_ = false;
+			}
+			else if (manager_id != 0 && manager_id_ == 0)
+			{
+				shm_ptr_->reader_mask &= ~(static_cast<uint64_t>(1) << manager_id);
+			}
 		}
 	}
 
-	void UnregisterWriter()
+	void UnregisterWriter(int manager_id = 0)
 	{
-		if (IsValid() && registered_writer_)
+		if (IsValid())
 		{
-			shm_ptr_->writer_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
-			registered_writer_ = false;
+			if (manager_id == 0 && registered_writer_)
+			{
+				shm_ptr_->writer_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
+				shm_ptr_->manager_pids[manager_id_] = 0;
+				registered_writer_ = false;
+			}
+			else if (manager_id != 0 && manager_id_ == 0)
+			{
+				shm_ptr_->writer_mask &= ~(static_cast<uint64_t>(1) << manager_id);
+			}
 		}
 	}
 
@@ -485,6 +503,7 @@ private:
 		size_t next_sequence_id;
 		bool destructive_read_mode;
 
+		pid_t manager_pids[64];
 		std::atomic<uint64_t> writer_mask;
 		std::atomic<uint64_t> reader_mask;
 
