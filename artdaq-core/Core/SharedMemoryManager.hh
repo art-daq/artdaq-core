@@ -36,6 +36,8 @@ public:
 		Reading   ///< The buffer is currently being read from
 	};
 
+	constexpr static size_t BUFFER_NOT_FOUND = static_cast<size_t>(-1);  ///< Constant representing a buffer not found
+
 	/**
 	 * \brief Convert a BufferSemaphoreFlags variable to its string represenatation
 	 * \param flag BufferSemaphoreFlags variable to convert
@@ -80,17 +82,17 @@ public:
 
 	/**
 	 * \brief Finds a buffer that is ready to be read, and reserves it for the calling manager.
-	 * \return The id number of the buffer, or -1 if no buffer is available.
+	 * \return The id number of the buffer, or BUFFER_NOT_FOUND if no buffer is available.
 	 */
-	int GetBufferForReading();
+	size_t GetBufferForReading();
 
 	/**
 	 * \brief Finds a buffer that is ready to be written to, and reserves it for the calling manager.
 	 * \param overwrite Whether to consider buffers that are in the Full and Reading state as ready for write (non-reliable mode)
 	 * \param sequence_id_override If non-zero, override the buffer sequence ID with the provided value for read ordering
-	 * \return The id number of the buffer, or -1 if no buffer is available.
+	 * \return The id number of the buffer, or BUFFER_NOT_FOUND if no buffer is available.
 	 */
-	int GetBufferForWriting(bool overwrite, size_t sequence_id_override = 0);
+	size_t GetBufferForWriting(bool overwrite, size_t sequence_id_override = 0);
 
 	/**
 	 * \brief Whether any buffer is ready for read
@@ -340,7 +342,7 @@ public:
 	 * \brief Get the key of the shared memory attached to this SharedMemoryManager
 	 * \return The shared memory key
 	 */
-	uint32_t GetKey() const { return shm_key_; }
+	key_t GetKey() const { return shm_key_; }
 
 	/**
 	 * \brief Get a pointer to the current read position of the buffer
@@ -388,7 +390,7 @@ public:
 	 * \brief Get the number of reader instances connected to the Shared Memory
 	 * \return The number of attached readers, as reported by the readers
 	 */
-	int GetReaderCount() { return IsValid() ? std::bitset<64>(shm_ptr_->reader_mask.load()).count() : 0; }
+	size_t GetReaderCount() { return IsValid() ? std::bitset<64>(shm_ptr_->reader_mask.load()).count() : 0; }
 	/**
 	 * \brief Gets the highest buffer number either written or read by this SharedMemoryManager
 	 * \return The highest buffer id written or read by this SharedMemoryManager

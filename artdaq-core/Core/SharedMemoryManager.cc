@@ -357,7 +357,7 @@ bool artdaq::SharedMemoryManager::claimBufferForReading_(ShmBufferSem semaphore,
 	return true;
 }
 
-int artdaq::SharedMemoryManager::GetBufferForReading()
+size_t artdaq::SharedMemoryManager::GetBufferForReading()
 {
 	TLOG(TLVL_GETBUFFER) << "GetBufferForReading BEGIN";
 	RegisterReader();
@@ -420,11 +420,11 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 		}
 	}
 
-	TLOG(TLVL_GETBUFFER) << "Returning -1 because no buffers are ready";
-	return -1;
+	TLOG(TLVL_GETBUFFER) << "Returning BUFFER_NOT_FOUND because no buffers are ready";
+	return BUFFER_NOT_FOUND;
 }
 
-int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequence_id_override)
+size_t artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequence_id_override)
 {
 	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting BEGIN, overwrite=" << (overwrite ? "true" : "false");
 
@@ -556,8 +556,8 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 			}
 		}
 	}
-	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting Returning -1 because no buffers are ready";
-	return -1;
+	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting Returning BUFFER_NOT_FOUND because no buffers are ready";
+	return BUFFER_NOT_FOUND;
 }  // NOLINT(readability/fn_size)
 
 size_t artdaq::SharedMemoryManager::ReadReadyCount()

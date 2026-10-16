@@ -25,7 +25,7 @@ typedef std::unique_ptr<artdaq::FragmentGenerator> makeFunc_t(fhicl::ParameterSe
 #define EXTERN_C_FUNC_DECLARE_START extern "C" {
 #endif
 
-// NOLINTNEXTLINE(build/define_used)
+// NOLINTNEXTLINE(build/define_used,cppcoreguidelines-macro-usage)
 #define DEFINE_ARTDAQ_GENERATOR(klass)                                    \
 	EXTERN_C_FUNC_DECLARE_START                                           \
 	std::unique_ptr<artdaq::FragmentGenerator>                            \

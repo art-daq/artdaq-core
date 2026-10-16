@@ -411,7 +411,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 			if (reader_man.ReadyForRead())
 			{
 				auto buffer_id = reader_man.GetBufferForReading();
-				if (buffer_id == -1)
+				if (buffer_id == artdaq::SharedMemoryManager::BUFFER_NOT_FOUND)
 				{
 					if (counter != 0)
 					{
@@ -458,7 +458,7 @@ BOOST_AUTO_TEST_CASE(RoundRobin)
 						current_oom *= 10;
 					}
 				}
-				int buf = man.GetBufferForWriting(false);
+				auto buf = man.GetBufferForWriting(false);
 				man.Write(buf, &write_counter, sizeof(write_counter));
 				man.MarkBufferFull(buf);
 				write_counter++;
