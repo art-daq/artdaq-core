@@ -3,7 +3,7 @@
 #include "artdaq-core/Core/SharedMemoryFragmentManager.hh"
 #include "TRACE/tracemf.h"
 
-artdaq::SharedMemoryFragmentManager::SharedMemoryFragmentManager(uint32_t shm_key, size_t buffer_count, size_t max_buffer_size, size_t buffer_timeout_us)
+artdaq::SharedMemoryFragmentManager::SharedMemoryFragmentManager(key_t shm_key, size_t buffer_count, size_t max_buffer_size, size_t buffer_timeout_us)
     : SharedMemoryManager(shm_key, buffer_count, max_buffer_size, buffer_timeout_us)
     , active_buffer_(-1)
 {

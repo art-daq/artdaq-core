@@ -1,17 +1,24 @@
 #define TRACE_NAME "SharedMemoryManager"
+
+#include "artdaq-core/Core/SharedMemoryManager.hh"
+
+#include "TRACE/tracemf.h"
+
+#include "cetlib_except/exception.h"
+
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <csignal>
 #include <cstring>
 #include <list>
 #include <map>
 #include <unordered_map>
+#include <utility>
+
 #ifndef SHM_DEST  // Lynn reports that this is missing on Mac OS X?!?
+// NOLINTNEXTLINE(build/define_used)
 #define SHM_DEST 01000
 #endif
-#include <csignal>
-#include "TRACE/tracemf.h"
-#include "artdaq-core/Core/SharedMemoryManager.hh"
-#include "cetlib_except/exception.h"
 
 #define TLVL_DETACH 34
 #define TLVL_DESTRUCTOR 35
@@ -47,7 +54,7 @@ static void signal_handler(int signum)
 	{
 		if (ii != nullptr)
 		{
-			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+			// NOLINTNEXTLINE
 			const_cast<artdaq::SharedMemoryManager*>(ii)->Detach(false, "", "", false /* don't force destruct segment, allows reconnection (applicable for
 			               restart and/or multiple art processes (i.e. dispatcher)) */
 			);
@@ -68,7 +75,7 @@ static void signal_handler(int signum)
 	sigaction(signum, &old_actions[signum], nullptr);
 }
 
-artdaq::SharedMemoryManager::SharedMemoryManager(uint32_t shm_key, size_t buffer_count, size_t buffer_size, uint64_t buffer_timeout_us, bool destructive_read_mode)
+artdaq::SharedMemoryManager::SharedMemoryManager(key_t shm_key, size_t buffer_count, size_t buffer_size, uint64_t buffer_timeout_us, bool destructive_read_mode)
     : shm_segment_id_(-1)
     , shm_ptr_(nullptr)
     , shm_key_(shm_key)
@@ -172,7 +179,7 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 	TLOG(TLVL_INFO) << "Requested shared memory size " << PrintBytes(shmSize)
 	                << " (" << requested_shm_parameters_.buffer_count << " buffers * " << PrintBytes(requested_shm_parameters_.buffer_size) << ")"
 	                << ", available RAM " << PrintBytes(available);
-	if (shmSize > 0.8 * available)
+	if (static_cast<double>(shmSize) > 0.8 * static_cast<double>(available))
 	{
 		TLOG(TLVL_WARNING) << "Requested shared memory size is greater than 80% of available RAM! Allocation of shared memory will likely fail!";
 	}
@@ -236,7 +243,7 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 		TLOG(TLVL_ATTACH)
 		    << "Attached to shared memory segment at address "
 		    << std::hex << std::showbase << static_cast<void*>(shm_ptr_) << std::dec;
-		if ((shm_ptr_ != nullptr) && shm_ptr_ != reinterpret_cast<void*>(-1))  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		if ((shm_ptr_ != nullptr) && shm_ptr_ != reinterpret_cast<void*>(-1))  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 		{
 			if (manager_id_ == 0)
 			{
@@ -251,7 +258,7 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 				TLOG(TLVL_ATTACH) << "Owner initializing Shared Memory";
 				shm_ptr_->next_id = 1;
 				shm_ptr_->next_sequence_id = 0;
-				bzero(shm_ptr_->manager_pids, sizeof(shm_ptr_->manager_pids));
+				memset(shm_ptr_->manager_pids, 0, sizeof(shm_ptr_->manager_pids));
 				shm_ptr_->manager_pids[0] = getpid();
 				shm_ptr_->reader_mask = 0;
 				shm_ptr_->writer_mask = 0;
@@ -263,7 +270,7 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 				buffer_ptrs_ = std::vector<ShmBuffer*>(shm_ptr_->buffer_count);
 				for (int ii = 0; ii < static_cast<int>(requested_shm_parameters_.buffer_count); ++ii)
 				{
-					buffer_ptrs_[ii] = reinterpret_cast<ShmBuffer*>(reinterpret_cast<uint8_t*>(shm_ptr_ + 1) + ii * sizeof(ShmBuffer));  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+					buffer_ptrs_[ii] = reinterpret_cast<ShmBuffer*>(reinterpret_cast<uint8_t*>(shm_ptr_ + 1) + ii * sizeof(ShmBuffer));  // NOLINT
 					if (getBufferInfo_(ii) == nullptr)
 					{
 						return false;
@@ -286,9 +293,9 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 
 				requested_shm_parameters_.buffer_count = shm_ptr_->buffer_count;
 				buffer_ptrs_ = std::vector<ShmBuffer*>(shm_ptr_->buffer_count);
-				for (int ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+				for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 				{
-					buffer_ptrs_[ii] = reinterpret_cast<ShmBuffer*>(reinterpret_cast<uint8_t*>(shm_ptr_ + 1) + ii * sizeof(ShmBuffer));  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+					buffer_ptrs_[ii] = reinterpret_cast<ShmBuffer*>(reinterpret_cast<uint8_t*>(shm_ptr_ + 1) + ii * sizeof(ShmBuffer));  // NOLINT
 				}
 			}
 
@@ -313,9 +320,9 @@ bool artdaq::SharedMemoryManager::Attach(size_t timeout_usec)
 	                 << "if a stale shared memory segment needs to "
 	                 << "be cleaned up. (ipcs, ipcrm -m <segId>)";
 	return false;
-}
+}  // NOLINT(readability/fn_size)
 
-bool artdaq::SharedMemoryManager::claimBufferForReading_(ShmBufferSem semaphore, ShmBuffer* buffer_ptr, int buffer_num)
+bool artdaq::SharedMemoryManager::claimBufferForReading_(ShmBufferSem semaphore, ShmBuffer* buffer_ptr, size_t buffer_num)
 {
 	if (buffer_ptr == nullptr)
 	{
@@ -350,7 +357,7 @@ bool artdaq::SharedMemoryManager::claimBufferForReading_(ShmBufferSem semaphore,
 	return true;
 }
 
-int artdaq::SharedMemoryManager::GetBufferForReading()
+size_t artdaq::SharedMemoryManager::GetBufferForReading()
 {
 	TLOG(TLVL_GETBUFFER) << "GetBufferForReading BEGIN";
 	RegisterReader();
@@ -360,14 +367,14 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 	for (int retry = 0; retry < 5; retry++)
 	{
 		ShmBufferSem semaphore;
-		int buffer_num = -1;
+		size_t buffer_num = 0;
 		auto rp = reader_pos_.load();
 		auto reader_count = GetReaderCount();
 		auto now = TimeUtils::gettimeofday_us();
 
 		std::map<size_t, std::pair<int, ShmBufferSem>> potential_buffers;
 
-		for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+		for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 		{
 			buffer_num = (ii + rp) % shm_ptr_->buffer_count;
 
@@ -413,11 +420,11 @@ int artdaq::SharedMemoryManager::GetBufferForReading()
 		}
 	}
 
-	TLOG(TLVL_GETBUFFER) << "Returning -1 because no buffers are ready";
-	return -1;
+	TLOG(TLVL_GETBUFFER) << "Returning BUFFER_NOT_FOUND because no buffers are ready";
+	return BUFFER_NOT_FOUND;
 }
 
-int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequence_id_override)
+size_t artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequence_id_override)
 {
 	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting BEGIN, overwrite=" << (overwrite ? "true" : "false");
 
@@ -428,7 +435,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 	TLOG(TLVL_GETBUFFER) << "GetBufferForWriting scanning " << shm_ptr_->buffer_count << " buffers";
 
 	// First, only look for "Empty" buffers
-	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+	for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
 		auto buffer = (ii + wp) % shm_ptr_->buffer_count;
 
@@ -455,7 +462,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 				continue;
 			}
 			writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
-			buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;
+			buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;  // NOLINT
 			buf->writePos = 0;
 			if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
 			{
@@ -470,7 +477,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 	if (overwrite)
 	{
 		// Then, look for "Full" buffers
-		for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+		for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 		{
 			auto buffer = (ii + wp) % shm_ptr_->buffer_count;
 
@@ -497,7 +504,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 					continue;
 				}
 				writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
-				buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;
+				buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;  // NOLINT
 				buf->writePos = 0;
 				if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
 				{
@@ -510,7 +517,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 		}
 
 		// Finally, if we still haven't found a buffer, we have to clobber a reader...
-		for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+		for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 		{
 			auto buffer = (ii + wp) % shm_ptr_->buffer_count;
 
@@ -537,7 +544,7 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 					continue;
 				}
 				writer_pos_ = (buffer + 1) % shm_ptr_->buffer_count;
-				buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;
+				buf->sequence_id = sequence_id_override == 0 ? ++shm_ptr_->next_sequence_id : sequence_id_override;  // NOLINT
 				buf->writePos = 0;
 				if (!checkBuffer_(buf, BufferSemaphoreFlags::Writing, false))
 				{
@@ -549,9 +556,9 @@ int artdaq::SharedMemoryManager::GetBufferForWriting(bool overwrite, size_t sequ
 			}
 		}
 	}
-	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting Returning -1 because no buffers are ready";
-	return -1;
-}
+	TLOG(TLVL_GETBUFFER + 1) << "GetBufferForWriting Returning BUFFER_NOT_FOUND because no buffers are ready";
+	return BUFFER_NOT_FOUND;
+}  // NOLINT(readability/fn_size)
 
 size_t artdaq::SharedMemoryManager::ReadReadyCount()
 {
@@ -563,7 +570,7 @@ size_t artdaq::SharedMemoryManager::ReadReadyCount()
 	TLOG(TLVL_READREADY) << std::hex << std::showbase << shm_key_ << " ReadReadyCount BEGIN" << std::dec;
 	TLOG(TLVL_READREADY) << "ReadReadyCount scanning " << shm_ptr_->buffer_count << " buffers";
 	size_t count = 0;
-	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+	for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
 #ifndef __OPTIMIZE__
 		TLOG(TLVL_READREADY + 1) << std::hex << std::showbase << shm_key_ << std::dec << " ReadReadyCount: Checking if buffer " << ii << " is stale.";
@@ -601,7 +608,7 @@ size_t artdaq::SharedMemoryManager::WriteReadyCount(bool overwrite)
 	TLOG(TLVL_WRITEREADY) << std::hex << std::showbase << shm_key_ << " WriteReadyCount BEGIN" << std::dec;
 	TLOG(TLVL_WRITEREADY) << "WriteReadyCount(" << overwrite << ") scanning " << shm_ptr_->buffer_count << " buffers";
 	size_t count = 0;
-	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+	for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
 		// ELF, 3/19/2019: This TRACE call is a major performance hit with many buffers
 #ifndef __OPTIMIZE__
@@ -638,7 +645,7 @@ bool artdaq::SharedMemoryManager::ReadyForRead()
 
 	TLOG(TLVL_READREADY) << "ReadyForRead scanning " << shm_ptr_->buffer_count << " buffers";
 
-	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+	for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
 		auto buffer = (rp + ii) % shm_ptr_->buffer_count;
 
@@ -682,7 +689,7 @@ bool artdaq::SharedMemoryManager::ReadyForWrite(bool overwrite)
 
 	TLOG(TLVL_WRITEREADY) << "ReadyForWrite scanning " << shm_ptr_->buffer_count << " buffers";
 
-	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+	for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
 		auto buffer = (wp + ii) % shm_ptr_->buffer_count;
 		TLOG(TLVL_WRITEREADY + 1) << std::hex << std::showbase << shm_key_ << std::dec << " ReadyForWrite: Checking if buffer " << buffer << " is stale.";
@@ -705,9 +712,9 @@ bool artdaq::SharedMemoryManager::ReadyForWrite(bool overwrite)
 	return false;
 }
 
-std::deque<int> artdaq::SharedMemoryManager::GetBuffersOwnedByManager()
+std::deque<size_t> artdaq::SharedMemoryManager::GetBuffersOwnedByManager()
 {
-	std::deque<int> output;
+	std::deque<size_t> output;
 	size_t buffer_count = size();
 	if (!IsValid() || buffer_count == 0)
 	{
@@ -731,7 +738,7 @@ std::deque<int> artdaq::SharedMemoryManager::GetBuffersOwnedByManager()
 	return output;
 }
 
-size_t artdaq::SharedMemoryManager::BufferDataSize(int buffer)
+size_t artdaq::SharedMemoryManager::BufferDataSize(size_t buffer)
 {
 	TLOG(TLVL_BUFFER) << "BufferDataSize(" << buffer << ") called.";
 
@@ -751,7 +758,7 @@ size_t artdaq::SharedMemoryManager::BufferDataSize(int buffer)
 	return buf->writePos;
 }
 
-void artdaq::SharedMemoryManager::ResetReadPos(int buffer)
+void artdaq::SharedMemoryManager::ResetReadPos(size_t buffer)
 {
 	TLOG(TLVL_POS) << "ResetReadPos(" << buffer << ") called.";
 
@@ -771,7 +778,7 @@ void artdaq::SharedMemoryManager::ResetReadPos(int buffer)
 	TLOG(TLVL_POS) << "ResetReadPos(" << buffer << ") ended.";
 }
 
-void artdaq::SharedMemoryManager::ResetWritePos(int buffer)
+void artdaq::SharedMemoryManager::ResetWritePos(size_t buffer)
 {
 	TLOG(TLVL_POS + 1) << "ResetWritePos(" << buffer << ") called.";
 
@@ -792,7 +799,7 @@ void artdaq::SharedMemoryManager::ResetWritePos(int buffer)
 	TLOG(TLVL_POS + 1) << "ResetWritePos(" << buffer << ") ended.";
 }
 
-void artdaq::SharedMemoryManager::IncrementReadPos(int buffer, size_t read)
+void artdaq::SharedMemoryManager::IncrementReadPos(size_t buffer, size_t read)
 {
 	TLOG(TLVL_POS) << "IncrementReadPos called: buffer= " << buffer << ", bytes to read=" << read;
 
@@ -816,7 +823,7 @@ void artdaq::SharedMemoryManager::IncrementReadPos(int buffer, size_t read)
 	}
 }
 
-bool artdaq::SharedMemoryManager::IncrementWritePos(int buffer, size_t written)
+bool artdaq::SharedMemoryManager::IncrementWritePos(size_t buffer, size_t written)
 {
 	TLOG(TLVL_POS + 1) << "IncrementWritePos called: buffer= " << buffer << ", bytes written=" << written;
 
@@ -848,7 +855,7 @@ bool artdaq::SharedMemoryManager::IncrementWritePos(int buffer, size_t written)
 	return true;
 }
 
-bool artdaq::SharedMemoryManager::MoreDataInBuffer(int buffer)
+bool artdaq::SharedMemoryManager::MoreDataInBuffer(size_t buffer)
 {
 	TLOG(TLVL_POS + 2) << "MoreDataInBuffer(" << buffer << ") called.";
 
@@ -866,7 +873,7 @@ bool artdaq::SharedMemoryManager::MoreDataInBuffer(int buffer)
 	return buf->readPos < buf->writePos;
 }
 
-bool artdaq::SharedMemoryManager::CheckBuffer(int buffer, BufferSemaphoreFlags flags)
+bool artdaq::SharedMemoryManager::CheckBuffer(size_t buffer, BufferSemaphoreFlags flags)
 {
 	if (buffer >= shm_ptr_->buffer_count)
 	{
@@ -876,7 +883,7 @@ bool artdaq::SharedMemoryManager::CheckBuffer(int buffer, BufferSemaphoreFlags f
 	return checkBuffer_(getBufferInfo_(buffer), flags, false);
 }
 
-void artdaq::SharedMemoryManager::MarkBufferFull(int buffer, int destination)
+void artdaq::SharedMemoryManager::MarkBufferFull(size_t buffer, int destination)
 {
 	if (buffer >= shm_ptr_->buffer_count)
 	{
@@ -901,7 +908,7 @@ void artdaq::SharedMemoryManager::MarkBufferFull(int buffer, int destination)
 	}
 }
 
-void artdaq::SharedMemoryManager::MarkBufferEmpty(int buffer, bool force, bool detachOnException)
+void artdaq::SharedMemoryManager::MarkBufferEmpty(size_t buffer, bool force, bool detachOnException)
 {
 	TLOG(TLVL_POS + 3) << "MarkBufferEmpty BEGIN, buffer=" << buffer << ", force=" << force << ", manager_id_=" << manager_id_;
 	if (buffer >= shm_ptr_->buffer_count)
@@ -964,7 +971,7 @@ bool artdaq::SharedMemoryManager::isBufferStale_(ShmBuffer* shmBuf)
 	return true;
 }
 
-bool artdaq::SharedMemoryManager::ResetBuffer(int buffer)
+bool artdaq::SharedMemoryManager::ResetBuffer(size_t buffer)
 {
 	if (buffer >= shm_ptr_->buffer_count)
 	{
@@ -1072,20 +1079,20 @@ uint16_t artdaq::SharedMemoryManager::GetAttachedCount()
 
 	for (size_t ii = 0; ii < 64; ++ii)
 	{
-		auto ret = kill(shm_ptr_->manager_pids[ii], 0);
+		auto ret = kill(shm_ptr_->manager_pids[ii], 0);  // NOLINT
 		if (ret < 0 && errno == ESRCH)
 		{
 			TLOG(TLVL_WARNING) << "Manager " << ii << ", PID " << shm_ptr_->manager_pids[ii] << " is not running.";
 			UnregisterReader(ii);
 			UnregisterWriter(ii);
-			shm_ptr_->manager_pids[ii] = 0;
+			shm_ptr_->manager_pids[ii] = 0;  // NOLINT
 		}
 	}
 
 	return info.shm_nattch;
 }
 
-size_t artdaq::SharedMemoryManager::Write(int buffer, void* data, size_t size)
+size_t artdaq::SharedMemoryManager::Write(size_t buffer, void* data, size_t size)
 {
 	TLOG(TLVL_WRITE) << "Write BEGIN";
 	if (buffer >= shm_ptr_->buffer_count)
@@ -1119,7 +1126,7 @@ size_t artdaq::SharedMemoryManager::Write(int buffer, void* data, size_t size)
 	return size;
 }
 
-bool artdaq::SharedMemoryManager::Read(int buffer, void* data, size_t size)
+bool artdaq::SharedMemoryManager::Read(size_t buffer, void* data, size_t size)
 {
 	if (buffer >= shm_ptr_->buffer_count)
 	{
@@ -1171,7 +1178,7 @@ std::string artdaq::SharedMemoryManager::toString()
 	     << "Ready Magic Bytes: " << std::hex << std::showbase << shm_ptr_->ready_magic << std::dec << std::endl
 	     << std::endl;
 
-	for (auto ii = 0; ii < shm_ptr_->buffer_count; ++ii)
+	for (size_t ii = 0; ii < shm_ptr_->buffer_count; ++ii)
 	{
 		auto buf = getBufferInfo_(ii);
 		if (buf == nullptr)
@@ -1185,14 +1192,14 @@ std::string artdaq::SharedMemoryManager::toString()
 		     << "readPos: " << std::to_string(buf->readPos) << std::endl
 		     << "sem: " << FlagToString(buf->semaphore.load().flags) << std::endl
 		     << "Owner: " << std::to_string(buf->semaphore.load().id) << std::endl
-		     << "Last Touch Time: " << std::to_string(buf->last_touch_time / 1000000.0) << std::endl
+		     << "Last Touch Time: " << std::to_string(static_cast<double>(buf->last_touch_time) / 1000000.0) << std::endl
 		     << std::endl;
 	}
 
 	return ostr.str();
 }
 
-void* artdaq::SharedMemoryManager::GetReadPos(int buffer)
+void* artdaq::SharedMemoryManager::GetReadPos(size_t buffer)
 {
 	auto buf = getBufferInfo_(buffer);
 	if (buf == nullptr)
@@ -1201,7 +1208,7 @@ void* artdaq::SharedMemoryManager::GetReadPos(int buffer)
 	}
 	return bufferStart_(buffer) + buf->readPos;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
-void* artdaq::SharedMemoryManager::GetWritePos(int buffer)
+void* artdaq::SharedMemoryManager::GetWritePos(size_t buffer)
 {
 	auto buf = getBufferInfo_(buffer);
 	if (buf == nullptr)
@@ -1211,12 +1218,12 @@ void* artdaq::SharedMemoryManager::GetWritePos(int buffer)
 	return bufferStart_(buffer) + buf->writePos;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
-void* artdaq::SharedMemoryManager::GetBufferStart(int buffer)
+void* artdaq::SharedMemoryManager::GetBufferStart(size_t buffer)
 {
 	return bufferStart_(buffer);
 }
 
-std::vector<std::pair<int, artdaq::SharedMemoryManager::BufferSemaphoreFlags>> artdaq::SharedMemoryManager::GetBufferReport()
+std::vector<std::pair<int, artdaq::SharedMemoryManager::BufferSemaphoreFlags>> artdaq::SharedMemoryManager::GetBufferReport() const
 {
 	auto output = std::vector<std::pair<int, BufferSemaphoreFlags>>(size());
 	for (size_t ii = 0; ii < size(); ++ii)

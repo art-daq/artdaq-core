@@ -78,7 +78,7 @@ void ExceptionHandler(ExceptionHandlerRethrow decision, const std::string& optio
 
 		if (decision == ExceptionHandlerRethrow::yes) { throw; }
 	}
-	catch (...)
+	catch (...)  // NOLINT
 	{
 		TLOG(TLVL_ERROR) << "Exception of type unknown to artdaq::ExceptionHandler caught";
 		PrintExceptionStackTrace();

@@ -1,17 +1,21 @@
-#ifndef _artdaq_core_Plugins_FragmentNameHelper_hh_
-#define _artdaq_core_Plugins_FragmentNameHelper_hh_
-
-#include <set>
-#include <string>
-#include <vector>
-
-#include <cetlib/BasicPluginFactory.h>
-#include <cetlib/compiler_macros.h>
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_FRAGMENTNAMEHELPER_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_FRAGMENTNAMEHELPER_HH_
 
 #include "artdaq-core/Data/ContainerFragment.hh"
 #include "artdaq-core/Data/Fragment.hh"
 
+#include <cetlib/BasicPluginFactory.h>
+#include <cetlib/compiler_macros.h>
+
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
 #ifndef EXTERN_C_FUNC_DECLARE_START
+// NOLINTNEXTLINE(build/define_used)
 #define EXTERN_C_FUNC_DECLARE_START \
 	extern "C" {
 #endif
@@ -20,6 +24,7 @@
  * @brief Declare the function that will be called by the plugin loader
  * @param klass Class to be defined as a DUNE DAQ Module
  */
+// NOLINTNEXTLINE
 #define DEFINE_ARTDAQ_FRAGMENT_NAME_HELPER(klass)                                                                                                   \
 	EXTERN_C_FUNC_DECLARE_START                                                                                                                     \
 	std::shared_ptr<artdaq::FragmentNameHelper> make(std::string unidentified, std::vector<std::pair<artdaq::Fragment::type_t, std::string>> types) \
@@ -113,7 +118,7 @@ public:
 			}
 		}
 
-		auto container_type = type_map_.find(artdaq::Fragment::type_t(artdaq::Fragment::ContainerFragmentType));
+		auto container_type = type_map_.find(artdaq::Fragment::ContainerFragmentType);
 		if (container_type != type_map_.end())
 		{
 			std::string container_type_name = container_type->second;
@@ -211,4 +216,4 @@ makeNameHelper(std::string const& plugin_name, std::string const& unidentified_i
 }
 }  // namespace artdaq
 
-#endif  //_artdaq_core_Plugins_FragmentNameHelper_hh_
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_FRAGMENTNAMEHELPER_HH_

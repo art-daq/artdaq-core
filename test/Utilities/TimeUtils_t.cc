@@ -1,11 +1,12 @@
 #include "artdaq-core/Utilities/TimeUtils.hh"
 
-#define BOOST_TEST_MODULE TimeUtils_t
-#include <cmath>
-#include "cetlib/quiet_unit_test.hpp"
-
 #define TRACE_NAME "TimeUtils_t"
 #include "TRACE/tracemf.h"
+
+#define BOOST_TEST_MODULE TimeUtils_t
+#include "cetlib/quiet_unit_test.hpp"
+
+#include <cmath>
 
 BOOST_AUTO_TEST_SUITE(TimeUtils_test)
 
@@ -43,7 +44,7 @@ BOOST_AUTO_TEST_CASE(GetElapsedTime)
 
 BOOST_AUTO_TEST_CASE(UnixTime)
 {
-	time_t t = time(0);
+	time_t t = time(nullptr);
 	struct timeval tv;
 	gettimeofday(&tv, nullptr);
 	struct timespec ts = artdaq::TimeUtils::get_realtime_clock();

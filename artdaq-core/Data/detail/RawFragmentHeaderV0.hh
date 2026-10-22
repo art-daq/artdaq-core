@@ -1,26 +1,24 @@
-#ifndef artdaq_core_Data_detail_RawFragmentHeaderV0_hh
-#define artdaq_core_Data_detail_RawFragmentHeaderV0_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_DETAIL_RAWFRAGMENTHEADERV0_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_DETAIL_RAWFRAGMENTHEADERV0_HH_
 // detail::RawFragmentHeaderV0 is an overlay that provides the user's view
 // of the data contained within a Fragment. It is intended to be hidden
 // from the user of Fragment, as an implementation detail. The interface
 // of Fragment is intended to be used to access the data.
 
-// #include <cstddef>
-#include <map>
 #include "artdaq-core/Data/detail/RawFragmentHeader.hh"
 #include "artdaq-core/Data/dictionarycontrol.hh"
 #include "artdaq-core/Utilities/TimeUtils.hh"
+
 #include "cetlib_except/exception.h"
+
+#include <map>
+#include <string>
 
 extern "C" {
 #include <stdint.h>  // NOLINT(modernize-deprecated-headers)
 }
 
-namespace artdaq {
-namespace detail {
-struct RawFragmentHeaderV0;
-}
-}  // namespace artdaq
+namespace artdaq::detail {
 
 /**
  * \brief The RawFragmentHeaderV0 class contains the basic fields used by _artdaq_ for routing Fragment objects through the system.
@@ -30,7 +28,7 @@ struct RawFragmentHeaderV0;
  * This is an old version of RawFragmentHeader, provided for compatibility
  *
  */
-struct artdaq::detail::RawFragmentHeaderV0
+struct RawFragmentHeaderV0
 {
 	/**
 	 * \brief The RawDataType (currently a 64-bit integer) is the basic unit of data representation within _artdaq_
@@ -144,26 +142,26 @@ struct artdaq::detail::RawFragmentHeaderV0
 	 */
 	RawFragmentHeader upgrade() const;
 
-#endif /* HIDE_FROM_ROOT */
+#endif  // HIDE_FROM_ROOT
 };
 
 #if HIDE_FROM_ROOT
 inline constexpr std::size_t
-artdaq::detail::RawFragmentHeaderV0::num_words()
+RawFragmentHeaderV0::num_words()
 {
 	return sizeof(detail::RawFragmentHeaderV0) / sizeof(RawDataType);
 }
 
 // Compile-time check that the assumption made in num_words() above is
 // actually true.
-static_assert((artdaq::detail::RawFragmentHeaderV0::num_words() *
-               sizeof(artdaq::detail::RawFragmentHeaderV0::RawDataType)) ==
-                  sizeof(artdaq::detail::RawFragmentHeaderV0),
+static_assert((RawFragmentHeaderV0::num_words() *
+               sizeof(RawFragmentHeaderV0::RawDataType)) ==
+                  sizeof(RawFragmentHeaderV0),
               "sizeof(RawFragmentHeader) is not an integer "
               "multiple of sizeof(RawDataType)!");
 
 inline void
-artdaq::detail::RawFragmentHeaderV0::setUserType(uint8_t utype)
+RawFragmentHeaderV0::setUserType(uint8_t utype)
 {
 	if (utype < FIRST_USER_TYPE || utype > LAST_USER_TYPE)
 	{
@@ -176,7 +174,7 @@ artdaq::detail::RawFragmentHeaderV0::setUserType(uint8_t utype)
 }
 
 inline void
-artdaq::detail::RawFragmentHeaderV0::setSystemType(uint8_t stype)
+RawFragmentHeaderV0::setSystemType(uint8_t stype)
 {
 	if (stype < FIRST_SYSTEM_TYPE /*|| stype > LAST_SYSTEM_TYPE*/)
 	{
@@ -187,8 +185,8 @@ artdaq::detail::RawFragmentHeaderV0::setSystemType(uint8_t stype)
 	type = stype;
 }
 
-inline artdaq::detail::RawFragmentHeader
-artdaq::detail::RawFragmentHeaderV0::upgrade() const
+inline RawFragmentHeader
+RawFragmentHeaderV0::upgrade() const
 {
 	RawFragmentHeader output;
 	output.word_count = word_count;
@@ -212,6 +210,7 @@ artdaq::detail::RawFragmentHeaderV0::upgrade() const
 
 	return output;
 }
-#endif
+#endif  // HIDE_FROM_ROOT
+}  // namespace artdaq::detail
 
-#endif /* artdaq_core_Data_detail_RawFragmentHeaderV0_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_DETAIL_RAWFRAGMENTHEADERV0_HH_

@@ -1,11 +1,9 @@
-#ifndef artdaq_core_Data_PackageBuildInfo_hh
-#define artdaq_core_Data_PackageBuildInfo_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_PACKAGEBUILDINFO_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_PACKAGEBUILDINFO_HH_
 
 #include <string>
 
 namespace artdaq {
-class PackageBuildInfo;
-}
 
 /**
  * \brief Class holding information about the _artdaq_ package build.
@@ -14,13 +12,13 @@ class PackageBuildInfo;
  * and the timestamp of the build. _artdaq_ stores this information in each
  * data file.
  */
-class artdaq::PackageBuildInfo
+class PackageBuildInfo
 {
 public:
 	/**
 	 * \brief Default Constructor
 	 */
-	explicit PackageBuildInfo() {}
+	PackageBuildInfo() {}
 
 	/**
 	 * \brief Gets the package name
@@ -72,5 +70,5 @@ private:
 	 */
 	std::string buildTimestamp_;
 };
-
-#endif /* artdaq_core_Data_PackageBuildInfo_hh */
+}  // namespace artdaq
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_PACKAGEBUILDINFO_HH_

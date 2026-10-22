@@ -1,8 +1,9 @@
-#ifndef artdaq_Application_configureMessageFacility_hh
-#define artdaq_Application_configureMessageFacility_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_CONFIGUREMESSAGEFACILITY_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_CONFIGUREMESSAGEFACILITY_HH_
+
+#include "fhiclcpp/ParameterSet.h"
 
 #include <string>
-#include "fhiclcpp/ParameterSet.h"
 
 namespace artdaq {
 /**
@@ -39,4 +40,4 @@ void configureMessageFacility(char const* progname, bool useConsole = true, bool
 std::string setMsgFacAppName(const std::string& appType, unsigned short port);
 }  // namespace artdaq
 
-#endif /* artdaq_Application_configureMessageFacility_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_CONFIGUREMESSAGEFACILITY_HH_

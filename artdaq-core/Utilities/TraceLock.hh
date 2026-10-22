@@ -1,8 +1,10 @@
-#ifndef ARTDAQ_CORE_UTILITIES_TRACELOCK
-#define ARTDAQ_CORE_UTILITIES_TRACELOCK_HH 1
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_TRACELOCK_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_TRACELOCK_HH_
+
+#include "TRACE/tracemf.h"
 
 #include <mutex>
-#include "TRACE/tracemf.h"
+#include <string>
 
 /**
  * \brief The TraceLock class allows a user to debug the acquisition and releasing of locks, by wrapping the unique_lock<std::mutex> API with TRACE calls
@@ -22,7 +24,7 @@ public:
 	    , description_(description)
 	    , level_(level)
 	{
-		TLOG_ARB(level_, "TraceLock") << "Acquired Lock " << description_ << ", mutex=" << (void*)&mutex << ", lock=" << (void*)&lock_;  // NOLINT(google-readability-casting)
+		TLOG_ARB(level_, "TraceLock") << "Acquired Lock " << description_ << ", mutex=" << static_cast<void*>(&mutex) << ", lock=" << static_cast<void*>(&lock_);
 	}
 
 	/**
@@ -30,7 +32,7 @@ public:
 	 */
 	virtual ~TraceLock()
 	{
-		TLOG_ARB(level_, "TraceLock") << "Releasing lock " << description_ << ", lock=" << (void*)&lock_;  // NOLINT(google-readability-casting)
+		TLOG_ARB(level_, "TraceLock") << "Releasing lock " << description_ << ", lock=" << static_cast<void*>(&lock_);
 	}
 
 private:
@@ -44,4 +46,4 @@ private:
 	int level_;
 };
 
-#endif
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_UTILITIES_TRACELOCK_HH_

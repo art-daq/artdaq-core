@@ -1,5 +1,5 @@
-#ifndef ARTDAQ_CORE_CORE_SHARED_MEMORY_FRAGMENT_MANAGER_HH
-#define ARTDAQ_CORE_CORE_SHARED_MEMORY_FRAGMENT_MANAGER_HH 1
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYFRAGMENTMANAGER_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYFRAGMENTMANAGER_HH_
 
 #include "artdaq-core/Core/SharedMemoryManager.hh"
 #include "artdaq-core/Data/RawEvent.hh"
@@ -19,7 +19,7 @@ public:
 	 * \param buffer_timeout_us The maximum amount of time a buffer may be locked
 	 * before being returned to its previous state. This timer is reset upon any operation by the owning SharedMemoryManager.
 	 */
-	SharedMemoryFragmentManager(uint32_t shm_key, size_t buffer_count = 0, size_t max_buffer_size = 0, size_t buffer_timeout_us = 100 * 1000000);
+	explicit SharedMemoryFragmentManager(key_t shm_key, size_t buffer_count = 0, size_t max_buffer_size = 0, size_t buffer_timeout_us = 100 * 1000000);
 
 	/**
 	 * \brief SharedMemoryFragmentManager destructor
@@ -73,4 +73,4 @@ private:
 };
 }  // namespace artdaq
 
-#endif  // ARTDAQ_CORE_CORE_SHARED_MEMORY_FRAGMENT_MANAGER_HH
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYFRAGMENTMANAGER_HH_

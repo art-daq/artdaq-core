@@ -4,8 +4,8 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: QuickVec.hh,v $
 // rev="$Revision: 1.8 $$Date: 2014/09/05 19:21:11 $";
-#ifndef QuickVec_hh
-#define QuickVec_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_CORE_QUICKVEC_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_CORE_QUICKVEC_HH_
 
 // extern "C" {
 // #include <stdint.h>
@@ -15,7 +15,7 @@
 // #include <strings.h>		// bzero
 // #include <stdlib.h>		// posix_memalign
 #include <cstddef>  // ptrdiff_t
-// #include <utility>		// std::swap
+#include <utility>  // std::swap
 // #include <memory>		// unique_ptr
 /** \cond  */
 #include <cassert>
@@ -23,12 +23,14 @@
 #include <vector>
 /** \endcond */
 
+// NOLINTBEGIN(build/define_used)
 // #include "trace.h"		// TRACE
 #ifndef TRACEN
 #define TRACEN(nam, lvl, ...)
 #define UNDEF_TRACE_AT_END
 #endif
 
+// NOLINTNEXTLINE
 #define QV_ALIGN 512  // 512 byte align to support _possible_ direct I/O - see artdaq/artdaq/ArtModules/BinaryFileOutput_module.cc and artdaq issue #24437
 
 /**
@@ -37,7 +39,7 @@
  * \param size The size of memory to allocate
  * \return Pointer to allocated memory.
  */
-static inline void* QV_MEMALIGN(size_t boundary, size_t size)
+static inline void* QV_MEMALIGN(size_t boundary, size_t size)  // NOLINT
 {
 	void* retadr = nullptr;
 	posix_memalign(&retadr, boundary, size);  // allows calling with 512-byte align to support _possible_ direct I/O. Ref. issue #24437
@@ -45,16 +47,19 @@ static inline void* QV_MEMALIGN(size_t boundary, size_t size)
 }
 
 #ifndef QUICKVEC_DO_TEMPLATE
+// NOLINTNEXTLINE
 #define QUICKVEC_DO_TEMPLATE 1
 #endif
 
 #undef NOT_OLD_CXXSTD
 #if !defined(__GCCXML__) && defined(__GXX_EXPERIMENTAL_CXX0X__)
+// NOLINTNEXTLINE
 #define NOT_OLD_CXXSTD 1
 #endif
 
 #if QUICKVEC_DO_TEMPLATE == 0
 #ifndef QUICKVEC_TT
+// NOLINTNEXTLINE
 #define QUICKVEC_TT unsigned long long
 #endif
 #define TT_ QUICKVEC_TT
@@ -78,6 +83,7 @@ static inline void* QV_MEMALIGN(size_t boundary, size_t size)
 		return 5;                                                             \
 	}  // proper version for templates
 #endif
+// NOLINTEND(build/define_used)
 
 namespace artdaq {
 
@@ -101,7 +107,7 @@ struct QuickVec
 	 * \brief Allocates a QuickVec object, doing no initialization of allocated memory
 	 * \param sz Size of QuickVec object to allocate
 	 */
-	QuickVec(size_t sz);
+	explicit QuickVec(size_t sz);
 
 	/**
 	 * \brief Allocates a QuickVec object, initializing each element to the given value
@@ -119,9 +125,9 @@ struct QuickVec
 	 * \brief Copies the contents of a std::vector into a new QuickVec object
 	 * \param other The vector to copy
 	 */
-	QuickVec(std::vector<TT_>& other)
+	QuickVec(std::vector<TT_>& other)  // NOLINT(runtime/explicit) Allow implicit conversion from std::vector to QuickVec
 	    : size_(other.size())
-	    , data_(reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, other.capacity() * sizeof(TT_))))  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	    , data_(reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, other.capacity() * sizeof(TT_))))  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	    , capacity_(other.capacity())
 	{
 		TRACEN("QuickVec", 40, "QuickVec std::vector ctor b4 memcpy this=%p data_=%p &other[0]=%p size_=%d other.size()=%d", (void*)this, (void*)data_, (void*)&other[0], size_, other.size());  // NOLINT
@@ -140,7 +146,7 @@ struct QuickVec
 	 */
 	QuickVec(const QuickVec& other)  //= delete; // non construction-copyable
 	    : size_(other.size_)
-	    , data_(reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, other.capacity() * sizeof(TT_))))  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	    , data_(reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, other.capacity() * sizeof(TT_))))  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	    , capacity_(other.capacity_)
 	{
 		TRACEN("QuickVec", 40, "QuickVec copy ctor b4 memcpy this=%p data_=%p other.data_=%p size_=%d other.size_=%d", (void*)this, (void*)data_, (void*)other.data_, size_, other.size_);  // NOLINT
@@ -154,6 +160,7 @@ struct QuickVec
 	 */
 	QUICKVEC& operator=(const QuickVec& other)  //= delete; // non copyable
 	{
+		if (&other == this) return *this;
 		TRACEN("QuickVec", 40, "QuickVec copy assign b4 resize/memcpy this=%p data_=%p other.data_=%p size_=%d other.size_=%d", (void*)this, (void*)data_, (void*)other.data_, size_, other.size_);  // NOLINT
 		resize(other.size_);
 		memcpy(data_, other.data_, size_ * sizeof(TT_));
@@ -347,7 +354,7 @@ private:
 QUICKVEC_TEMPLATE
 inline QUICKVEC::QuickVec(size_t sz)
     : size_(sz)
-    , data_(reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, sz * sizeof(TT_))))  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+    , data_(reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, sz * sizeof(TT_))))  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
     , capacity_(sz)
 {
 	TRACEN("QuickVec", 45, "QuickVec %p ctor sz=%d data_=%p", (void*)this, size_, (void*)data_);  // NOLINT
@@ -356,7 +363,7 @@ inline QUICKVEC::QuickVec(size_t sz)
 QUICKVEC_TEMPLATE
 inline QUICKVEC::QuickVec(size_t sz, TT_ val)
     : size_(sz)
-    , data_(reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, sz * sizeof(TT_))))  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+    , data_(reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, sz * sizeof(TT_))))  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
     , capacity_(sz)
 {
 	TRACEN("QuickVec", 45, "QuickVec %p ctor sz=%d/v data_=%p", (void*)this, size_, (void*)data_);  // NOLINT
@@ -377,14 +384,14 @@ inline QUICKVEC::~QuickVec() noexcept
 QUICKVEC_TEMPLATE
 inline TT_& QUICKVEC::operator[](int idx)
 {
-	assert(idx < (int)size_);
+	assert(idx < static_cast<int>(size_));
 	return data_[idx];  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 QUICKVEC_TEMPLATE
 inline const TT_& QUICKVEC::operator[](int idx) const
 {
-	assert(idx < (int)size_);
+	assert(idx < static_cast<int>(size_));
 	return data_[idx];  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
@@ -395,21 +402,21 @@ QUICKVEC_TEMPLATE
 inline size_t QUICKVEC::capacity() const { return capacity_; }
 
 QUICKVEC_TEMPLATE
-inline QUICKVEC_TN::iterator QUICKVEC::begin() { return iterator(data_); }
+inline QUICKVEC_TN::iterator QUICKVEC::begin() { return iterator(data_); }  // NOLINT
 
 QUICKVEC_TEMPLATE
-inline QUICKVEC_TN::const_iterator QUICKVEC::begin() const { return iterator(data_); }
+inline QUICKVEC_TN::const_iterator QUICKVEC::begin() const { return iterator(data_); }  // NOLINT
 
 QUICKVEC_TEMPLATE
 inline QUICKVEC_TN::iterator QUICKVEC::end()
 {
-	return iterator(data_ + size_);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+	return iterator(data_ + size_);  // NOLINT
 }
 
 QUICKVEC_TEMPLATE
 inline QUICKVEC_TN::const_iterator QUICKVEC::end() const
 {
-	return const_iterator(data_ + size_);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+	return const_iterator(data_ + size_);  // NOLINT
 }
 
 QUICKVEC_TEMPLATE
@@ -419,7 +426,7 @@ inline void QUICKVEC::reserve(size_t size)
 	{
 		TT_* old = data_;
 		// data_ = new TT_[size];
-		data_ = reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, size * sizeof(TT_)));  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		data_ = reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, size * sizeof(TT_)));  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 		memcpy(data_, old, size_ * sizeof(TT_));
 		TRACEN("QuickVec", 43, "QUICKVEC::reserve after memcpy this=%p old=%p data_=%p capacity=%d", (void*)this, (void*)old, (void*)data_, (int)size);  // NOLINT
 
@@ -438,7 +445,7 @@ inline void QUICKVEC::resize(size_t size)
 	else  // increase/reallocate
 	{
 		TT_* old = data_;
-		data_ = reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, size * sizeof(TT_)));  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		data_ = reinterpret_cast<TT_*>(QV_MEMALIGN(QV_ALIGN, size * sizeof(TT_)));  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 		memcpy(data_, old, size_ * sizeof(TT_));
 		TRACEN("QuickVec", 43, "QUICKVEC::resize after memcpy this=%p old=%p data_=%p size=%d", (void*)this, (void*)old, (void*)data_, (int)size);  // NOLINT
 
@@ -494,11 +501,11 @@ inline QUICKVEC_TN::iterator QUICKVEC::insert(const_iterator position, size_t nn
 	iterator dst = end() + nn;  // for shifting existing data after
 	iterator src = end();       // insertion point
 	size_t cnt = end() - (begin() + offset);
-	while (cnt--) *--dst = *--src;
+	while (cnt--) *--dst = *--src;  // NOLINT(runtime/increment_decrement)
 
 	dst = begin() + offset;
 	size_ += nn;
-	while (nn--) *dst++ = val;
+	while (nn--) *dst++ = val;  // NOLINT(runtime/increment_decrement)
 	return begin() + offset;
 }
 
@@ -513,11 +520,11 @@ inline QUICKVEC_TN::iterator QUICKVEC::insert(const_iterator position, const_ite
 	iterator dst = end() + nn;  // for shifting existing data after
 	iterator src = end();       // insertion point
 	size_t cnt = end() - (begin() + offset);
-	while (cnt--) *--dst = *--src;
+	while (cnt--) *--dst = *--src;  // NOLINT(runtime/increment_decrement)
 
 	dst = begin() + offset;
 	size_ += nn;
-	while (nn--) *dst++ = *first++;
+	while (nn--) *dst++ = *first++;  // NOLINT(runtime/increment_decrement)
 	return begin() + offset;
 }
 
@@ -564,4 +571,4 @@ inline void QUICKVEC::push_back(const value_type& val)
 #undef TRACEN
 #undef UNDEF_TRACE_AT_END
 #endif
-#endif /* QuickVec_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_CORE_QUICKVEC_HH_

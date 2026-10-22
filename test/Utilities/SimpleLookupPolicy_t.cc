@@ -1,5 +1,8 @@
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
 
+#define TRACE_NAME "SimpleLookupPolicy_t"
+#include "TRACE/tracemf.h"
+
 #define BOOST_TEST_MODULE SimpleLookupPolicy_t
 #include "cetlib/quiet_unit_test.hpp"
 
@@ -7,9 +10,6 @@
 #include "cetlib_except/exception.h"
 
 #include <boost/filesystem.hpp>
-
-#define TRACE_NAME "SimpleLookupPolicy_t"
-#include "TRACE/tracemf.h"
 
 BOOST_AUTO_TEST_SUITE(SimpleLookupPolicy_test)
 

@@ -1,23 +1,21 @@
-#ifndef artdaq_core_Data_ContainerFragment_hh
-#define artdaq_core_Data_ContainerFragment_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_CONTAINERFRAGMENT_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_CONTAINERFRAGMENT_HH_
 
-#include <memory>
 #include "artdaq-core/Data/Fragment.hh"
 #include "cetlib_except/exception.h"
 
-// #include <ostream>
-// #include <vector>
+#include <limits>
+#include <memory>
+#include <vector>
 
 // Implementation of "ContainerFragment", an artdaq::Fragment overlay class
 
 namespace artdaq {
-class ContainerFragment;
-}
 
 /**
  * \brief The artdaq::ContainerFragment class represents a Fragment which contains other Fragments
  */
-class artdaq::ContainerFragment
+class ContainerFragment
 {
 public:
 	/// The current version of the ContainerFragmentHeader
@@ -43,7 +41,7 @@ public:
 		count_t missing_data : 1;   ///< Flag if the ContainerFragment knows that it is missing data
 
 		/// Offset of each Fragment within the ContainerFragment
-		size_t index[CONTAINER_FRAGMENT_COUNT_MAX];
+		size_t index[CONTAINER_FRAGMENT_COUNT_MAX];  // NOLINT(modernize-avoid-c-arrays)
 
 		/// Size of the Metadata object
 		static size_t const size_words = 8ul + CONTAINER_FRAGMENT_COUNT_MAX * sizeof(size_t) / sizeof(data_t);  // Units of Header::data_t
@@ -145,7 +143,7 @@ public:
 	 */
 	void const* dataBegin() const
 	{
-		return reinterpret_cast<void const*>(&*artdaq_Fragment_.dataBegin());  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		return reinterpret_cast<void const*>(&*artdaq_Fragment_.dataBegin());  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	}
 
 	/**
@@ -154,7 +152,7 @@ public:
 	 */
 	void const* dataEnd() const
 	{
-		return reinterpret_cast<void const*>(reinterpret_cast<uint8_t const*>(dataBegin()) + lastFragmentIndex());  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		return reinterpret_cast<void const*>(reinterpret_cast<uint8_t const*>(dataBegin()) + lastFragmentIndex());  // NOLINT
 	}
 
 	/**
@@ -182,7 +180,7 @@ public:
 			// Subtract RawFragmentHeader::num_words here as Fragment consturctor will allocate n + detail::RawFragmentHeader::num_words(), and we want fragSize to be allocated.
 			frag = std::make_unique<Fragment>((fragSize(index)) / sizeof(RawDataType) - detail::RawFragmentHeader::num_words());
 		}
-		memcpy(frag->headerAddress(), reinterpret_cast<uint8_t const*>(dataBegin()) + fragmentIndex(index), fragSize(index));  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		memcpy(frag->headerAddress(), reinterpret_cast<uint8_t const*>(dataBegin()) + fragmentIndex(index), fragSize(index));  // NOLINT
 		return frag;
 	}
 
@@ -261,11 +259,11 @@ protected:
 		TLOG(TLVL_DEBUG + 33, "ContainerFragment") << "Creating new index for ContainerFragment";
 		index_ptr_owner_ = std::make_unique<std::vector<size_t>>(metadata()->block_count + 1);
 
-		auto current = reinterpret_cast<uint8_t const*>(artdaq_Fragment_.dataBegin());  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		auto current = reinterpret_cast<uint8_t const*>(artdaq_Fragment_.dataBegin());  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 		size_t offset = 0;
 		for (int ii = 0; ii < metadata()->block_count; ++ii)
 		{
-			auto this_size = reinterpret_cast<const detail::RawFragmentHeader*>(current)->word_count * sizeof(RawDataType);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+			auto this_size = reinterpret_cast<const detail::RawFragmentHeader*>(current)->word_count * sizeof(RawDataType);  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 			offset += this_size;
 			index_ptr_owner_->at(ii) = offset;
 			current += this_size;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -280,11 +278,11 @@ protected:
 	void reset_index_ptr_() const
 	{
 		TLOG(TLVL_DEBUG + 33, "ContainerFragment") << "Request to reset index_ptr recieved. has_index=" << metadata()->has_index << ", Check word = " << std::hex
-		                                           << *(reinterpret_cast<size_t const*>(artdaq_Fragment_.dataBeginBytes() + metadata()->index_offset) + metadata()->block_count);    // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
-		if (metadata()->has_index && *(reinterpret_cast<size_t const*>(artdaq_Fragment_.dataBeginBytes() + metadata()->index_offset) + metadata()->block_count) == CONTAINER_MAGIC)  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		                                           << *(reinterpret_cast<size_t const*>(artdaq_Fragment_.dataBeginBytes() + metadata()->index_offset) + metadata()->block_count);    // NOLINT
+		if (metadata()->has_index && *(reinterpret_cast<size_t const*>(artdaq_Fragment_.dataBeginBytes() + metadata()->index_offset) + metadata()->block_count) == CONTAINER_MAGIC)  // NOLINT
 		{
 			TLOG(TLVL_DEBUG + 33, "ContainerFragment") << "Setting index_ptr to found valid index";
-			index_ptr_ = reinterpret_cast<size_t const*>(artdaq_Fragment_.dataBeginBytes() + metadata()->index_offset);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+			index_ptr_ = reinterpret_cast<size_t const*>(artdaq_Fragment_.dataBeginBytes() + metadata()->index_offset);  // NOLINT
 		}
 		else
 		{
@@ -318,5 +316,6 @@ private:
 	mutable std::unique_ptr<std::vector<size_t>> index_ptr_owner_;
 	mutable std::unique_ptr<Metadata> metadata_;
 };
+}  // namespace artdaq
 
-#endif /* artdaq_core_Data_ContainerFragment_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_CONTAINERFRAGMENT_HH_

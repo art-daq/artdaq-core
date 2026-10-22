@@ -1,5 +1,5 @@
-#ifndef artdaq_core_BuildInfo_GetPackageBuildInfo_hh
-#define artdaq_core_BuildInfo_GetPackageBuildInfo_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_BUILDINFO_GETPACKAGEBUILDINFO_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_BUILDINFO_GETPACKAGEBUILDINFO_HH_
 
 #include "artdaq-core/Data/PackageBuildInfo.hh"
 
@@ -21,4 +21,4 @@ struct GetPackageBuildInfo
 };
 }  // namespace artdaqcore
 
-#endif /* artdaq_core_BuildInfo_GetPackageBuildInfo_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_BUILDINFO_GETPACKAGEBUILDINFO_HH_
