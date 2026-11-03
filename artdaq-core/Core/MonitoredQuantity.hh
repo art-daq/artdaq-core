@@ -1,5 +1,5 @@
-#ifndef artdaq_core_Core_MonitoredQuantity_hh
-#define artdaq_core_Core_MonitoredQuantity_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_CORE_MONITOREDQUANTITY_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_CORE_MONITOREDQUANTITY_HH_
 
 #include <boost/thread/mutex.hpp>
 
@@ -328,4 +328,4 @@ private:
 };
 }  // namespace artdaq
 
-#endif /* artdaq_core_Core_MonitoredQuantity_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_CORE_MONITOREDQUANTITY_HH_

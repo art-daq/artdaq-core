@@ -1,11 +1,11 @@
-#ifndef artdaq_core_Plugins_makeFragmentGenerator_hh
-#define artdaq_core_Plugins_makeFragmentGenerator_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_MAKEFRAGMENTGENERATOR_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_MAKEFRAGMENTGENERATOR_HH_
 // Using LibraryManager, find the correct library and return an instance
 // of the specified generator.
 
 namespace fhicl {
 class ParameterSet;
-}
+}  // namespace fhicl
 
 #include "artdaq-core/Plugins/FragmentGenerator.hh"
 
@@ -24,4 +24,4 @@ std::unique_ptr<FragmentGenerator>
 makeFragmentGenerator(std::string const& generator_plugin_spec,
                       fhicl::ParameterSet const& ps);
 }  // namespace artdaq
-#endif /* artdaq_core_Plugins_makeFragmentGenerator_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_MAKEFRAGMENTGENERATOR_HH_

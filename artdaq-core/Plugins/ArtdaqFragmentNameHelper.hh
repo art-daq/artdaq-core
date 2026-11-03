@@ -1,12 +1,13 @@
-#ifndef _artdaq_core_Plugins_ArtdaqFragmentNameHelper_hh_
-#define _artdaq_core_Plugins_ArtdaqFragmentNameHelper_hh_
-
-#include <set>
-#include <string>
-#include <vector>
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_ARTDAQFRAGMENTNAMEHELPER_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_ARTDAQFRAGMENTNAMEHELPER_HH_
 
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Plugins/FragmentNameHelper.hh"
+
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace artdaq {
 /**
@@ -35,4 +36,4 @@ private:
 };
 }  // namespace artdaq
 
-#endif  //_artdaq_core_Plugins_ArtdaqFragmentNameHelper_hh_
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_ARTDAQFRAGMENTNAMEHELPER_HH_

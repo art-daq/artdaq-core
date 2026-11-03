@@ -1,5 +1,5 @@
-#ifndef artdaq_core_Data_dictionary_control_hh
-#define artdaq_core_Data_dictionary_control_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_DICTIONARYCONTROL_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_DICTIONARYCONTROL_HH_
 
 // This header defines the CPP symbol HIDE_FROM_ROOT. This symbol
 // can be used to hide code from Root dictionaries, as shown below
@@ -14,7 +14,8 @@
 
 #undef HIDE_FROM_ROOT
 #if !defined(__GCCXML__) && !defined(__ROOTCLING__)  //&& defined(__GXX_EXPERIMENTAL_CXX0X__)
+// NOLINTNEXTLINE
 #define HIDE_FROM_ROOT 1
 #endif
 
-#endif /* artdaq_core_Data_dictionary_control_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_DICTIONARYCONTROL_HH_

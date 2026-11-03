@@ -31,9 +31,9 @@ BOOST_AUTO_TEST_CASE(PrintStackTrace)
 {
 	try
 	{
-		throw int(5);
+		throw int(5);  // NOLINT
 	}
-	catch (int)
+	catch (int)  // NOLINT
 	{
 		PrintExceptionStackTrace();
 	}

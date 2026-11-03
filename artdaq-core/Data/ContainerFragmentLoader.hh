@@ -1,5 +1,5 @@
-#ifndef artdaq_core_Data_ContainerFragmentLoader_hh
-#define artdaq_core_Data_ContainerFragmentLoader_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_CONTAINERFRAGMENTLOADER_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_CONTAINERFRAGMENTLOADER_HH_
 
 ////////////////////////////////////////////////////////////////////////
 // ContainerFragmentLoader
@@ -18,13 +18,11 @@
 #include <iostream>
 
 namespace artdaq {
-class ContainerFragmentLoader;
-}
 
 /**
  * \brief A Read-Write version of the ContainerFragment, used for filling ContainerFragment objects with other Fragment objects
  */
-class artdaq::ContainerFragmentLoader : public artdaq::ContainerFragment
+class ContainerFragmentLoader : public ContainerFragment
 {
 public:
 	/**
@@ -43,7 +41,7 @@ public:
 	Metadata* metadata()
 	{
 		assert(artdaq_Fragment_.hasMetadata());
-		return reinterpret_cast<Metadata*>(&*artdaq_Fragment_.metadataAddress());  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+		return reinterpret_cast<Metadata*>(&*artdaq_Fragment_.metadataAddress());  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	}
 
 	/**
@@ -73,25 +71,25 @@ public:
 	 * \param frag A Fragment object to be added to the ContainerFragment
 	 * \exception cet::exception If the Fragment to be added has a different type than expected
 	 */
-	void addFragment(artdaq::Fragment& frag, bool allowDifferentTypes = false);
+	void addFragment(Fragment& frag, bool allowDifferentTypes = false);
 
 	/**
 	 * \brief Add a Fragment to the ContainerFragment by smart pointer
 	 * \param frag A FragmentPtr to a Fragment to be added to the ContainerFragment
 	 */
-	void addFragment(artdaq::FragmentPtr& frag, bool allowDifferentTypes = false);
+	void addFragment(FragmentPtr& frag, bool allowDifferentTypes = false);
 
 	/**
 	 * \brief Add a collection of Fragment objects to the ContainerFragment
-	 * \param frags An artdaq::Fragments object containing Fragments to be added to the ContainerFragment
+	 * \param frags An Fragments object containing Fragments to be added to the ContainerFragment
 	 */
-	void addFragments(artdaq::Fragments& frags, bool allowDifferentTypes = false);
+	void addFragments(Fragments& frags, bool allowDifferentTypes = false);
 
 	/**
 	 * \brief Add a collection of Fragment objects to the ContainerFragment
-	 * \param frags An artdaq::FragmentPtrs object containing Fragments to be added to the ContainerFragment
+	 * \param frags An FragmentPtrs object containing Fragments to be added to the ContainerFragment
 	 */
-	void addFragments(artdaq::FragmentPtrs& frags, bool allowDifferentTypes = false);
+	void addFragments(FragmentPtrs& frags, bool allowDifferentTypes = false);
 
 	/**
 	 * \brief Create a Fragment at the end of the ContainerFragment with the given size
@@ -106,21 +104,21 @@ public:
 	 */
 	void resizeLastFragment(size_t nwords);
 
-	detail::RawFragmentHeader* lastFragmentHeader() { return reinterpret_cast<detail::RawFragmentHeader*>(dataBegin_() + fragmentIndex(block_count() - 1)); }
+	detail::RawFragmentHeader* lastFragmentHeader() { return reinterpret_cast<detail::RawFragmentHeader*>(dataBegin_() + fragmentIndex(block_count() - 1)); }  // NOLINT
 
 private:
 	// Note that this non-const reference hides the const reference in the base class
-	artdaq::Fragment& artdaq_Fragment_;
+	Fragment& artdaq_Fragment_;
 
 	static size_t words_to_frag_words_(size_t nWords);
 
 	void addSpace_(size_t bytes);
 
-	uint8_t* dataBegin_() { return reinterpret_cast<uint8_t*>(&*artdaq_Fragment_.dataBegin()); }  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+	uint8_t* dataBegin_() { return reinterpret_cast<uint8_t*>(&*artdaq_Fragment_.dataBegin()); }  // NOLINT(runtime/casting,cppcoreguidelines-pro-type-reinterpret-cast)
 	void* dataEnd_() { return static_cast<void*>(dataBegin_() + lastFragmentIndex()); }           // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 };
 
-inline artdaq::ContainerFragmentLoader::ContainerFragmentLoader(artdaq::Fragment& f, artdaq::Fragment::type_t expectedFragmentType = Fragment::EmptyFragmentType)
+inline ContainerFragmentLoader::ContainerFragmentLoader(Fragment& f, Fragment::type_t expectedFragmentType = Fragment::EmptyFragmentType)
     : ContainerFragment(f)
     , artdaq_Fragment_(f)
 {
@@ -135,35 +133,35 @@ inline artdaq::ContainerFragmentLoader::ContainerFragmentLoader(artdaq::Fragment
 	artdaq_Fragment_.setMetadata<Metadata>(m);
 
 	if (artdaq_Fragment_.size() !=
-	    artdaq::detail::RawFragmentHeader::num_words() +
+	    detail::RawFragmentHeader::num_words() +
 	        words_to_frag_words_(Metadata::size_words))
 	{
-		TLOG(TLVL_ERROR, "ContainerFragmentLoader") << "ContainerFragmentLoader: Raw artdaq::Fragment object size suggests it does not consist of its own header + the ContainerFragment::Metadata object";
-		TLOG(TLVL_ERROR, "ContainerFragmentLoader") << "artdaq_Fragment size: " << artdaq_Fragment_.size() << ", Expected size: " << artdaq::detail::RawFragmentHeader::num_words() + words_to_frag_words_(Metadata::size_words);
+		TLOG(TLVL_ERROR, "ContainerFragmentLoader") << "ContainerFragmentLoader: Raw Fragment object size suggests it does not consist of its own header + the ContainerFragment::Metadata object";
+		TLOG(TLVL_ERROR, "ContainerFragmentLoader") << "artdaq_Fragment size: " << artdaq_Fragment_.size() << ", Expected size: " << detail::RawFragmentHeader::num_words() + words_to_frag_words_(Metadata::size_words);
 
-		throw cet::exception("InvalidFragment") << "ContainerFragmentLoader: Raw artdaq::Fragment object size suggests it does not consist of its own header + the ContainerFragment::Metadata object";  // NOLINT(cert-err60-cpp)
+		throw cet::exception("InvalidFragment") << "ContainerFragmentLoader: Raw Fragment object size suggests it does not consist of its own header + the ContainerFragment::Metadata object";  // NOLINT(cert-err60-cpp)
 	}
 
 	artdaq_Fragment_.resize(1);
 	*artdaq_Fragment_.dataBegin() = CONTAINER_MAGIC;
 }
 
-inline size_t artdaq::ContainerFragmentLoader::words_to_frag_words_(size_t nWords)
+inline size_t ContainerFragmentLoader::words_to_frag_words_(size_t nWords)
 {
 	size_t mod = nWords % words_per_frag_word_();
 	return mod ? nWords / words_per_frag_word_() + 1 : nWords / words_per_frag_word_();
 }
 
-inline void artdaq::ContainerFragmentLoader::addSpace_(size_t bytes)
+inline void ContainerFragmentLoader::addSpace_(size_t bytes)
 {
-	auto currSize = sizeof(artdaq::Fragment::value_type) * artdaq_Fragment_.dataSize();  // Resize takes into account header and metadata size
+	auto currSize = sizeof(Fragment::value_type) * artdaq_Fragment_.dataSize();  // Resize takes into account header and metadata size
 	artdaq_Fragment_.resizeBytesWithCushion(bytes + currSize, 1.3);
 	reset_index_ptr_();  // Must reset index_ptr after resize operation!
 
 	TLOG(TLVL_DEBUG + 33, "ContainerFragmentLoader") << "addSpace_: dataEnd_ is now at " << static_cast<void*>(dataEnd_()) << " (oldSizeBytes/deltaBytes: " << currSize << "/" << bytes << ")";
 }
 
-inline void artdaq::ContainerFragmentLoader::addFragment(artdaq::Fragment& frag, bool allowDifferentTypes)
+inline void ContainerFragmentLoader::addFragment(Fragment& frag, bool allowDifferentTypes)
 {
 	TLOG(TLVL_DEBUG + 33, "ContainerFragmentLoader") << "addFragment: Adding Fragment with payload size " << frag.dataSizeBytes() << " to Container";
 	if (metadata()->fragment_type == Fragment::EmptyFragmentType)
@@ -184,7 +182,7 @@ inline void artdaq::ContainerFragmentLoader::addFragment(artdaq::Fragment& frag,
 	memcpy(dataEnd_(), frag.headerAddress(), frag.sizeBytes());
 	metadata()->has_index = 0;
 
-	metadata()->block_count++;
+	metadata()->block_count++;  // NOLINT(runtime/increment_decrement)
 
 	auto index = create_index_();
 	metadata()->index_offset = index[metadata()->block_count - 1];                                           // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -194,7 +192,7 @@ inline void artdaq::ContainerFragmentLoader::addFragment(artdaq::Fragment& frag,
 	reset_index_ptr_();
 }
 
-inline void artdaq::ContainerFragmentLoader::addFragments(artdaq::Fragments& frags, bool allowDifferentTypes)
+inline void ContainerFragmentLoader::addFragments(Fragments& frags, bool allowDifferentTypes)
 {
 	TLOG(TLVL_DEBUG + 33, "ContainerFragmentLoader") << "addFragments: Adding " << frags.size() << " Fragments to Container";
 
@@ -222,7 +220,7 @@ inline void artdaq::ContainerFragmentLoader::addFragments(artdaq::Fragments& fra
 		// frag->setSequenceID(artdaq_Fragment_.sequenceID());
 		TLOG(TLVL_DEBUG + 33, "ContainerFragmentLoader") << "addFragments, copying " << frag.sizeBytes() << " bytes from " << static_cast<void*>(frag.headerAddress()) << " to " << static_cast<void*>(dataEnd_());
 		memcpy(data_ptr, frag.headerAddress(), frag.sizeBytes());
-		data_ptr = static_cast<uint8_t*>(data_ptr) + frag.sizeBytes();
+		data_ptr = static_cast<uint8_t*>(data_ptr) + frag.sizeBytes();  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	}
 	metadata()->has_index = 0;
 	metadata()->block_count += frags.size();
@@ -235,7 +233,7 @@ inline void artdaq::ContainerFragmentLoader::addFragments(artdaq::Fragments& fra
 	reset_index_ptr_();
 }
 
-inline artdaq::detail::RawFragmentHeader* artdaq::ContainerFragmentLoader::appendFragment(size_t nwords)
+inline detail::RawFragmentHeader* ContainerFragmentLoader::appendFragment(size_t nwords)
 {
 	TLOG(TLVL_TRACE, "ContainerFragmentLoader") << "addFragment: Allocating Fragment with payload size " << nwords << " in Container";
 
@@ -259,7 +257,7 @@ inline artdaq::detail::RawFragmentHeader* artdaq::ContainerFragmentLoader::appen
 
 	metadata()->has_index = 0;
 
-	metadata()->block_count++;
+	metadata()->block_count++;  // NOLINT(runtime/increment_decrement)
 
 	auto index = create_index_();
 	metadata()->index_offset = index[metadata()->block_count - 1];                                           // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -271,7 +269,7 @@ inline artdaq::detail::RawFragmentHeader* artdaq::ContainerFragmentLoader::appen
 	return lastFragmentHeader();
 }
 
-inline void artdaq::ContainerFragmentLoader::resizeLastFragment(size_t nwords)
+inline void ContainerFragmentLoader::resizeLastFragment(size_t nwords)
 {
 	auto hdr = lastFragmentHeader();
 	auto curFragSize = hdr->word_count - detail::RawFragmentHeader::num_words();
@@ -280,7 +278,7 @@ inline void artdaq::ContainerFragmentLoader::resizeLastFragment(size_t nwords)
 	// New size is larger than current
 	if (curFragSize < nwords)
 	{
-		addSpace_((nwords - curFragSize) * sizeof(artdaq::RawDataType));
+		addSpace_((nwords - curFragSize) * sizeof(RawDataType));
 	}
 	metadata()->has_index = 0;
 
@@ -292,12 +290,12 @@ inline void artdaq::ContainerFragmentLoader::resizeLastFragment(size_t nwords)
 	reset_index_ptr_();
 }
 
-inline void artdaq::ContainerFragmentLoader::addFragment(artdaq::FragmentPtr& frag, bool allowDifferentTypes)
+inline void ContainerFragmentLoader::addFragment(FragmentPtr& frag, bool allowDifferentTypes)
 {
 	addFragment(*frag, allowDifferentTypes);
 }
 
-inline void artdaq::ContainerFragmentLoader::addFragments(artdaq::FragmentPtrs& frags, bool allowDifferentTypes)
+inline void ContainerFragmentLoader::addFragments(FragmentPtrs& frags, bool allowDifferentTypes)
 {
 	TLOG(TLVL_DEBUG + 33, "ContainerFragmentLoader") << "addFragments: Adding " << frags.size() << " Fragments to Container";
 
@@ -325,7 +323,7 @@ inline void artdaq::ContainerFragmentLoader::addFragments(artdaq::FragmentPtrs& 
 		// frag->setSequenceID(artdaq_Fragment_.sequenceID());
 		TLOG(TLVL_DEBUG + 33, "ContainerFragmentLoader") << "addFragments, copying " << frag->sizeBytes() << " bytes from " << static_cast<void*>(frag->headerAddress()) << " to " << static_cast<void*>(dataEnd_());
 		memcpy(data_ptr, frag->headerAddress(), frag->sizeBytes());
-		data_ptr = static_cast<uint8_t*>(data_ptr) + frag->sizeBytes();
+		data_ptr = static_cast<uint8_t*>(data_ptr) + frag->sizeBytes();  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	}
 	metadata()->has_index = 0;
 	metadata()->block_count += frags.size();
@@ -337,5 +335,5 @@ inline void artdaq::ContainerFragmentLoader::addFragments(artdaq::FragmentPtrs& 
 	metadata()->has_index = 1;
 	reset_index_ptr_();
 }
-
-#endif /* artdaq_core_Data_ContainerFragmentLoader_hh */
+}  // namespace artdaq
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_CONTAINERFRAGMENTLOADER_HH_

@@ -1,26 +1,23 @@
-#ifndef artdaq_core_Data_detail_RawFragmentHeader_hh
-#define artdaq_core_Data_detail_RawFragmentHeader_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_DETAIL_RAWFRAGMENTHEADER_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_DETAIL_RAWFRAGMENTHEADER_HH_
 // detail::RawFragmentHeader is an overlay that provides the user's view
 // of the data contained within a Fragment. It is intended to be hidden
 // from the user of Fragment, as an implementation detail. The interface
 // of Fragment is intended to be used to access the data.
 
-// #include <cstddef>
-#include <map>
 #include "artdaq-core/Data/dictionarycontrol.hh"
 #include "artdaq-core/Utilities/TimeUtils.hh"
+
 #include "cetlib_except/exception.h"
+
+#include <map>
+#include <string>
 
 extern "C" {
 #include <stdint.h>  // NOLINT(modernize-deprecated-headers)
 }
 
-namespace artdaq {
-namespace detail {
-struct RawFragmentHeader;
-}
-}  // namespace artdaq
-
+namespace artdaq::detail {
 /**
  * \brief The RawFragmentHeader class contains the basic fields used by _artdaq_ for routing Fragment objects through the system.
  *
@@ -28,7 +25,7 @@ struct RawFragmentHeader;
  * contains static value definitions of values used in those fields.
  *
  */
-struct artdaq::detail::RawFragmentHeader
+struct RawFragmentHeader
 {
 	/**
 	 * \brief The RawDataType (currently an unsigned long long) is the basic unit of data representation within _artdaq_
@@ -36,7 +33,7 @@ struct artdaq::detail::RawFragmentHeader
 	 * ELF, 7/30/2020: This typedef apparently cannot be changed without breaking compatibility with older data files.
 	                   I have tried and failed to deal with such a change in classes_def.xml.
 	 */
-	typedef unsigned long long RawDataType;
+	typedef unsigned long long RawDataType;  // NOLINT
 
 #if HIDE_FROM_ROOT
 	typedef uint16_t version_t;             ///< version field is 16 bits
@@ -74,9 +71,9 @@ struct artdaq::detail::RawFragmentHeader
 	static std::map<type_t, std::string> MakeSystemTypeMap()
 	{
 		return std::map<type_t, std::string>{
-		    {type_t(INVALID_TYPE), "INVALID"},
-		    {type_t(EmptyFragmentType), "Empty"},
-		    {type_t(ContainerFragmentType), "Container"}};
+		    {INVALID_TYPE, "INVALID"},
+		    {EmptyFragmentType, "Empty"},
+		    {ContainerFragmentType, "Container"}};
 	}
 
 	/**
@@ -86,17 +83,17 @@ struct artdaq::detail::RawFragmentHeader
 	static std::map<type_t, std::string> MakeVerboseSystemTypeMap()
 	{
 		return std::map<type_t, std::string>{
-		    {type_t(INVALID_TYPE), "INVALID"},
-		    {type_t(EndOfDataFragmentType), "EndOfData"},
-		    {type_t(DataFragmentType), "Data"},
-		    {type_t(RunDataFragmentType), "RunData"},
-		    {type_t(SubrunDataFragmentType), "SubrunData"},
-		    {type_t(InitFragmentType), "Init"},
-		    {type_t(EndOfRunFragmentType), "EndOfRun"},
-		    {type_t(EndOfSubrunFragmentType), "EndOfSubrun"},
-		    {type_t(ShutdownFragmentType), "Shutdown"},
-		    {type_t(EmptyFragmentType), "Empty"},
-		    {type_t(ContainerFragmentType), "Container"}};
+		    {INVALID_TYPE, "INVALID"},
+		    {EndOfDataFragmentType, "EndOfData"},
+		    {DataFragmentType, "Data"},
+		    {RunDataFragmentType, "RunData"},
+		    {SubrunDataFragmentType, "SubrunData"},
+		    {InitFragmentType, "Init"},
+		    {EndOfRunFragmentType, "EndOfRun"},
+		    {EndOfSubrunFragmentType, "EndOfSubrun"},
+		    {ShutdownFragmentType, "Shutdown"},
+		    {EmptyFragmentType, "Empty"},
+		    {ContainerFragmentType, "Container"}};
 	}
 
 	/**
@@ -201,26 +198,26 @@ struct artdaq::detail::RawFragmentHeader
 		       atime_ns == other.atime_ns &&
 		       atime_s == other.atime_s;
 	}
-#endif /* HIDE_FROM_ROOT */
+#endif  // HIDE_FROM_ROOT
 };
 
 #if HIDE_FROM_ROOT
 inline constexpr std::size_t
-artdaq::detail::RawFragmentHeader::num_words()
+RawFragmentHeader::num_words()
 {
 	return sizeof(detail::RawFragmentHeader) / sizeof(RawDataType);
 }
 
 // Compile-time check that the assumption made in num_words() above is
 // actually true.
-static_assert((artdaq::detail::RawFragmentHeader::num_words() *
-               sizeof(artdaq::detail::RawFragmentHeader::RawDataType)) ==
-                  sizeof(artdaq::detail::RawFragmentHeader),
+static_assert((RawFragmentHeader::num_words() *
+               sizeof(RawFragmentHeader::RawDataType)) ==
+                  sizeof(RawFragmentHeader),
               "sizeof(RawFragmentHeader) is not an integer "
               "multiple of sizeof(RawDataType)!");
 
 inline void
-artdaq::detail::RawFragmentHeader::setUserType(uint8_t utype)
+RawFragmentHeader::setUserType(uint8_t utype)
 {
 	if (utype < FIRST_USER_TYPE || utype > LAST_USER_TYPE)
 	{
@@ -233,7 +230,7 @@ artdaq::detail::RawFragmentHeader::setUserType(uint8_t utype)
 }
 
 inline void
-artdaq::detail::RawFragmentHeader::setSystemType(uint8_t stype)
+RawFragmentHeader::setSystemType(uint8_t stype)
 {
 	if (stype < FIRST_SYSTEM_TYPE /*|| stype > LAST_SYSTEM_TYPE*/)
 	{
@@ -244,22 +241,22 @@ artdaq::detail::RawFragmentHeader::setSystemType(uint8_t stype)
 	type = stype;
 }
 
-inline void artdaq::detail::RawFragmentHeader::touch()
+inline void RawFragmentHeader::touch()
 {
 	auto time = artdaq::TimeUtils::get_realtime_clock();
 	atime_ns = time.tv_nsec;
 	atime_s = time.tv_sec;
 }
 
-inline struct timespec artdaq::detail::RawFragmentHeader::atime() const
+inline struct timespec RawFragmentHeader::atime() const
 {
 	struct timespec ts;
-	ts.tv_nsec = atime_ns;
-	ts.tv_sec = atime_s;
+	ts.tv_nsec = atime_ns;  // NOLINT
+	ts.tv_sec = atime_s;    // NOLINT
 	return ts;
 }
 
-inline struct timespec artdaq::detail::RawFragmentHeader::getLatency(bool touch)
+inline struct timespec RawFragmentHeader::getLatency(bool touch)
 {
 	auto a_time = atime();
 	auto time = artdaq::TimeUtils::get_realtime_clock();
@@ -283,6 +280,7 @@ inline struct timespec artdaq::detail::RawFragmentHeader::getLatency(bool touch)
 	}
 	return a_time;
 }
-#endif
+#endif  // HIDE_FROM_ROOT
+}  // namespace artdaq::detail
 
-#endif /* artdaq_core_Data_detail_RawFragmentHeader_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_DETAIL_RAWFRAGMENTHEADER_HH_

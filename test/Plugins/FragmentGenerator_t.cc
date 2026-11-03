@@ -1,12 +1,13 @@
 #define BOOST_TEST_MODULE (FragmentGenerator_t)
-#include <cetlib/quiet_unit_test.hpp>
 
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Plugins/FragmentGenerator.hh"
 
+#include <cetlib/quiet_unit_test.hpp>
+
 namespace artdaqtest {
 class FragmentGeneratorTest;
-}
+}  // namespace artdaqtest
 
 /**
  * \brief Tests the functionality of the artdaq::FragmentGenerator class

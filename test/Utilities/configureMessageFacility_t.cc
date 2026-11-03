@@ -1,6 +1,9 @@
 #include "artdaq-core/Utilities/ExceptionHandler.hh"
 #include "artdaq-core/Utilities/configureMessageFacility.hh"
 
+#define TRACE_NAME "configureMessageFacility_t"
+#include "TRACE/tracemf.h"
+
 #define BOOST_TEST_MODULE configureMessageFacility_t
 #include "cetlib/quiet_unit_test.hpp"
 
@@ -10,9 +13,6 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 #include <boost/filesystem.hpp>
-
-#define TRACE_NAME "configureMessageFacility_t"
-#include "TRACE/tracemf.h"
 
 BOOST_AUTO_TEST_SUITE(configureMessageFacility_test)
 

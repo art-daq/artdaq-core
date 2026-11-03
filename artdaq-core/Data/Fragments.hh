@@ -1,5 +1,5 @@
-#ifndef artdaq_core_Data_Fragments_hh
-#define artdaq_core_Data_Fragments_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_DATA_FRAGMENTS_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_DATA_FRAGMENTS_HH_
 
 #include "artdaq-core/Data/Fragment.hh"
 /**
@@ -7,4 +7,4 @@
  */
 #pragma message "The Fragments.hh header is deprecated, please change your #include to <artdaq-core/Data/Fragment.hh>"
 
-#endif /* artdaq_core_Data_Fragments_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_DATA_FRAGMENTS_HH_

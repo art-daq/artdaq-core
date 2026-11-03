@@ -1,6 +1,9 @@
-#ifndef artdaq_core_Core_SharedMemoryManager_hh
-#define artdaq_core_Core_SharedMemoryManager_hh 1
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYMANAGER_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYMANAGER_HH_
 
+#include "artdaq-core/Utilities/TimeUtils.hh"
+
+#include <sys/sysinfo.h>
 #include <atomic>
 #include <bitset>
 #include <cstdio>
@@ -11,9 +14,8 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
-#include "artdaq-core/Utilities/TimeUtils.hh"
-#include "sys/sysinfo.h"
 
 namespace artdaq {
 /**
@@ -33,6 +35,8 @@ public:
 		Full,     ///< The buffer is full, and waiting for a reader
 		Reading   ///< The buffer is currently being read from
 	};
+
+	constexpr static size_t BUFFER_NOT_FOUND = static_cast<size_t>(-1);  ///< Constant representing a buffer not found
 
 	/**
 	 * \brief Convert a BufferSemaphoreFlags variable to its string represenatation
@@ -64,7 +68,7 @@ public:
 	 * before being returned to its previous state.
 	 * \param destructive_read_mode Whether a read operation empties the buffer (default: true, false for broadcast mode)
 	 */
-	SharedMemoryManager(uint32_t shm_key, size_t buffer_count = 0, size_t buffer_size = 0, uint64_t buffer_timeout_us = 100 * 1000000, bool destructive_read_mode = true);
+	explicit SharedMemoryManager(key_t shm_key, size_t buffer_count = 0, size_t buffer_size = 0, uint64_t buffer_timeout_us = 100 * 1000000, bool destructive_read_mode = true);
 
 	/**
 	 * \brief SharedMemoryManager Destructor
@@ -78,17 +82,17 @@ public:
 
 	/**
 	 * \brief Finds a buffer that is ready to be read, and reserves it for the calling manager.
-	 * \return The id number of the buffer. -1 indicates no buffers available for read.
+	 * \return The id number of the buffer, or BUFFER_NOT_FOUND if no buffer is available.
 	 */
-	int GetBufferForReading();
+	size_t GetBufferForReading();
 
 	/**
 	 * \brief Finds a buffer that is ready to be written to, and reserves it for the calling manager.
 	 * \param overwrite Whether to consider buffers that are in the Full and Reading state as ready for write (non-reliable mode)
 	 * \param sequence_id_override If non-zero, override the buffer sequence ID with the provided value for read ordering
-	 * \return The id number of the buffer. -1 indicates no buffers available for write.
+	 * \return The id number of the buffer, or BUFFER_NOT_FOUND if no buffer is available.
 	 */
-	int GetBufferForWriting(bool overwrite, size_t sequence_id_override = 0);
+	size_t GetBufferForWriting(bool overwrite, size_t sequence_id_override = 0);
 
 	/**
 	 * \brief Whether any buffer is ready for read
@@ -118,40 +122,40 @@ public:
 
 	/**
 	 * \brief Get the list of all buffers currently owned by this manager instance.
-	 * \return A std::deque<int> of buffer IDs currently owned by this manager instance.
+	 * \return A std::deque<size_t> of buffer IDs currently owned by this manager instance.
 	 */
-	std::deque<int> GetBuffersOwnedByManager();
+	std::deque<size_t> GetBuffersOwnedByManager();
 
 	/**
 	 * \brief Get the current size of the buffer's data
 	 * \param buffer Buffer ID of buffer
 	 * \return Current size of data in the buffer, in bytes
 	 */
-	size_t BufferDataSize(int buffer);
+	size_t BufferDataSize(size_t buffer);
 
 	/**
 	 * \brief Get the size of of a single buffer
 	 * \return The configured size of a single buffer, in bytes
 	 */
-	size_t BufferSize() { return (shm_ptr_ != nullptr ? shm_ptr_->buffer_size : 0); }
+	size_t BufferSize() const { return (IsValid() ? shm_ptr_->buffer_size : 0); }
 
 	/**
 	 * \brief Set the read position of the given buffer to the beginning of the buffer
 	 * \param buffer Buffer ID of buffer
 	 */
-	void ResetReadPos(int buffer);
+	void ResetReadPos(size_t buffer);
 
 	/**
 	 * \brief Set the write position of the given buffer to the beginning of the buffer
 	 * \param buffer Buffer ID of buffer
 	 */
-	void ResetWritePos(int buffer);
+	void ResetWritePos(size_t buffer);
 	/**
 	 * \brief Increment the read position for a given buffer
 	 * \param buffer Buffer ID of buffer
 	 * \param read Number of bytes by which to increment read position
 	 */
-	void IncrementReadPos(int buffer, size_t read);
+	void IncrementReadPos(size_t buffer, size_t read);
 
 	/**
 	 * \brief Increment the write position for a given buffer
@@ -159,14 +163,14 @@ public:
 	 * \param written Number of bytes by which to increment write position
 	 * \return Whether the write is allowed
 	 */
-	bool IncrementWritePos(int buffer, size_t written);
+	bool IncrementWritePos(size_t buffer, size_t written);
 
 	/**
 	 * \brief Determine if more data is available to be read, based on the read position and data size
 	 * \param buffer Buffer ID of buffer
 	 * \return Whether more data is available in the given buffer.
 	 */
-	bool MoreDataInBuffer(int buffer);
+	bool MoreDataInBuffer(size_t buffer);
 
 	/**
 	 * \brief Check both semaphore conditions (Mode flag and manager ID) for a given buffer
@@ -174,14 +178,14 @@ public:
 	 * \param flags Expected Mode flag
 	 * \return Whether the buffer passed the check
 	 */
-	bool CheckBuffer(int buffer, BufferSemaphoreFlags flags);
+	bool CheckBuffer(size_t buffer, BufferSemaphoreFlags flags);
 
 	/**
 	 * \brief Release a buffer from a writer, marking it Full and ready for a reader
 	 * \param buffer Buffer ID of buffer
 	 * \param destination If desired, a destination manager ID may be specified for a buffer
 	 */
-	void MarkBufferFull(int buffer, int destination = -1);
+	void MarkBufferFull(size_t buffer, int destination = -1);
 
 	/**
 	 * \brief Release a buffer from a reader, marking it Empty and ready to accept more data
@@ -189,7 +193,7 @@ public:
 	 * \param force Force buffer to empty state (only if manager_id_ == 0)
 	 * \param detachOnException Whether to throw exceptions when buffers are not in the expected state (default true)
 	 */
-	void MarkBufferEmpty(int buffer, bool force = false, bool detachOnException = true);
+	void MarkBufferEmpty(size_t buffer, bool force = false, bool detachOnException = true);
 
 	/**
 	 * \brief Resets the buffer from Reading to Full. This operation will only have an
@@ -197,7 +201,7 @@ public:
 	 * \param buffer Buffer ID of buffer
 	 * \return Whether the buffer has exceeded the maximum age
 	 */
-	bool ResetBuffer(int buffer);
+	bool ResetBuffer(size_t buffer);
 
 	/**
 	 * \brief Assign a new ID to the current SharedMemoryManager, if one has not yet been assigned
@@ -223,7 +227,7 @@ public:
 		if (IsValid() && !registered_reader_)
 		{
 			shm_ptr_->reader_mask |= (static_cast<uint64_t>(1) << manager_id_);
-			shm_ptr_->manager_pids[manager_id_] = getpid();
+			shm_ptr_->manager_pids[manager_id_] = getpid();  // NOLINT
 			registered_reader_ = true;
 		}
 	}
@@ -233,7 +237,7 @@ public:
 		if (IsValid() && !registered_writer_)
 		{
 			shm_ptr_->writer_mask |= (static_cast<uint64_t>(1) << manager_id_);
-			shm_ptr_->manager_pids[manager_id_] = getpid();
+			shm_ptr_->manager_pids[manager_id_] = getpid();  // NOLINT
 			registered_writer_ = true;
 		}
 	}
@@ -245,7 +249,7 @@ public:
 			if (manager_id == 0 && registered_reader_)
 			{
 				shm_ptr_->reader_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
-				shm_ptr_->manager_pids[manager_id_] = 0;
+				shm_ptr_->manager_pids[manager_id_] = 0;  // NOLINT
 				registered_reader_ = false;
 			}
 			else if (manager_id != 0 && manager_id_ == 0)
@@ -262,7 +266,7 @@ public:
 			if (manager_id == 0 && registered_writer_)
 			{
 				shm_ptr_->writer_mask &= ~(static_cast<uint64_t>(1) << manager_id_);
-				shm_ptr_->manager_pids[manager_id_] = 0;
+				shm_ptr_->manager_pids[manager_id_] = 0;  // NOLINT
 				registered_writer_ = false;
 			}
 			else if (manager_id != 0 && manager_id_ == 0)
@@ -317,7 +321,7 @@ public:
 	 * \param size Size of write, in bytes
 	 * \return Amount of data written, in bytes
 	 */
-	size_t Write(int buffer, void* data, size_t size);
+	size_t Write(size_t buffer, void* data, size_t size);
 
 	/**
 	 * \brief Read size bytes of data from buffer into the given pointer
@@ -326,7 +330,7 @@ public:
 	 * \param size Size of read, in bytes
 	 * \return Whether the read was successful
 	 */
-	bool Read(int buffer, void* data, size_t size);
+	bool Read(size_t buffer, void* data, size_t size);
 
 	/**
 	 *\brief Write information about the SharedMemory to a string
@@ -338,28 +342,28 @@ public:
 	 * \brief Get the key of the shared memory attached to this SharedMemoryManager
 	 * \return The shared memory key
 	 */
-	uint32_t GetKey() const { return shm_key_; }
+	key_t GetKey() const { return shm_key_; }
 
 	/**
 	 * \brief Get a pointer to the current read position of the buffer
 	 * \param buffer Buffer ID of buffer
 	 * \return void* pointer to the buffer's current read position
 	 */
-	void* GetReadPos(int buffer);
+	void* GetReadPos(size_t buffer);
 
 	/**
 	 * \brief Get a pointer to the current write position of the buffer
 	 * \param buffer Buffer ID of buffer
 	 * \return void* pointer to buffer's current write position
 	 */
-	void* GetWritePos(int buffer);
+	void* GetWritePos(size_t buffer);
 
 	/**
 	 * \brief Get a pointer to the start position of the buffer
 	 * \param buffer Buffer ID of buffer
 	 * \return void* pointer to buffer start position
 	 */
-	void* GetBufferStart(int buffer);
+	void* GetBufferStart(size_t buffer);
 
 	/**
 	 * \brief Detach from the Shared Memory segment, optionally throwing a cet::exception with the specified properties
@@ -386,7 +390,7 @@ public:
 	 * \brief Get the number of reader instances connected to the Shared Memory
 	 * \return The number of attached readers, as reported by the readers
 	 */
-	int GetReaderCount() { return IsValid() ? std::bitset<64>(shm_ptr_->reader_mask.load()).count() : 0; }
+	size_t GetReaderCount() { return IsValid() ? std::bitset<64>(shm_ptr_->reader_mask.load()).count() : 0; }
 	/**
 	 * \brief Gets the highest buffer number either written or read by this SharedMemoryManager
 	 * \return The highest buffer id written or read by this SharedMemoryManager
@@ -403,12 +407,12 @@ public:
 	 * \brief Get a report on the status of each buffer
 	 * \return A list of manager_id, semaphore pairs
 	 */
-	std::vector<std::pair<int, BufferSemaphoreFlags>> GetBufferReport();
+	std::vector<std::pair<int, BufferSemaphoreFlags>> GetBufferReport() const;
 
 	/**
 	 * \brief Touch the given buffer (update its last_touch_time)
 	 */
-	void TouchBuffer(int buffer) { return touchBuffer_(getBufferInfo_(buffer)); }
+	void TouchBuffer(size_t buffer) { return touchBuffer_(getBufferInfo_(buffer)); }
 
 	static uint64_t GetAvailableRAM()
 	{
@@ -422,7 +426,7 @@ public:
 				if (line.compare(0, 13, "MemAvailable:") == 0)
 				{
 					uint64_t kb = 0;
-					if (std::sscanf(line.c_str(), "MemAvailable: %lu", &kb) == 1)
+					if (std::sscanf(line.c_str(), "MemAvailable: %lu", &kb) == 1)  // NOLINT
 					{
 						return kb * 1024ULL;
 					}
@@ -441,21 +445,21 @@ public:
 
 	static std::string PrintBytes(uint64_t bytes)
 	{
-		double print = bytes / 1024.0 / 1024.0 / 1024.0;
+		double print = static_cast<double>(bytes) / 1024.0 / 1024.0 / 1024.0;
 		std::string unit = "GB";
 		if (bytes < 1024)
 		{
-			print = bytes;
+			print = static_cast<double>(bytes);
 			unit = "B";
 		}
 		else if (bytes < 1024 * 1024)
 		{
-			print = bytes / 1024.0;
+			print = static_cast<double>(bytes) / 1024.0;
 			unit = "KB";
 		}
 		else if (bytes < 1024 * 1024 * 1024)
 		{
-			print = bytes / 1024.0 / 1024.0;
+			print = static_cast<double>(bytes) / 1024.0 / 1024.0;
 			unit = "MB";
 		}
 
@@ -495,13 +499,13 @@ private:
 
 	struct ShmStruct
 	{
-		int buffer_count;
+		size_t buffer_count;
 		size_t buffer_size;
 		size_t buffer_timeout_us;
 		size_t next_sequence_id;
 		bool destructive_read_mode;
 
-		pid_t manager_pids[64];
+		pid_t manager_pids[64];  // NOLINT(modernize-avoid-c-arrays)
 		std::atomic<uint64_t> writer_mask;
 		std::atomic<uint64_t> reader_mask;
 
@@ -518,10 +522,10 @@ private:
 	inline uint8_t* dataStart_() const
 	{
 		if (shm_ptr_ == nullptr) return nullptr;
-		return reinterpret_cast<uint8_t*>(shm_ptr_ + 1) + shm_ptr_->buffer_count * sizeof(ShmBuffer);  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+		return reinterpret_cast<uint8_t*>(shm_ptr_ + 1) + shm_ptr_->buffer_count * sizeof(ShmBuffer);  // NOLINT
 	}
 
-	inline uint8_t* bufferStart_(int buffer)
+	inline uint8_t* bufferStart_(size_t buffer)
 	{
 		if (shm_ptr_ == nullptr) return nullptr;
 		if (buffer >= requested_shm_parameters_.buffer_count && buffer >= shm_ptr_->buffer_count)
@@ -533,15 +537,17 @@ private:
 			return dataStart_() + buffer * shm_ptr_->buffer_size;  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 	}
 
-	inline ShmBuffer* getBufferInfo_(int buffer)
+	inline ShmBuffer* getBufferInfo_(size_t buffer) const
 	{
 		if (shm_ptr_ == nullptr) return nullptr;
 		// Check local variable first, but re-check shared memory
 		if (buffer >= requested_shm_parameters_.buffer_count && buffer >= shm_ptr_->buffer_count)
-			Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");
+		{
+			const_cast<SharedMemoryManager*>(this)->Detach(true, "ArgumentOutOfRange", "The specified buffer does not exist!");  // NOLINT
+		}
 		return buffer_ptrs_[buffer];
 	}
-	bool claimBufferForReading_(ShmBufferSem semaphore, ShmBuffer* buffer_ptr, int buffer_num);
+	bool claimBufferForReading_(ShmBufferSem semaphore, ShmBuffer* buffer_ptr, size_t buffer_num);
 	bool checkBuffer_(ShmBuffer* buffer, BufferSemaphoreFlags flags, bool exceptions = true);
 	void touchBuffer_(ShmBuffer* buffer);
 
@@ -549,7 +555,7 @@ private:
 
 	int shm_segment_id_;
 	ShmStruct* shm_ptr_;
-	uint32_t shm_key_;
+	key_t shm_key_;
 	int manager_id_;
 	std::vector<ShmBuffer*> buffer_ptrs_;
 
@@ -565,4 +571,4 @@ private:
 
 }  // namespace artdaq
 
-#endif  // artdaq_core_Core_SharedMemoryManager_hh
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYMANAGER_HH_

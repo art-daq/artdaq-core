@@ -1,4 +1,11 @@
 #include "artdaq-core/Utilities/configureMessageFacility.hh"
+#include "artdaq-core/Utilities/ExceptionHandler.hh"
+
+#define TRACE_NAME "configureMessageFacility"
+#include "TRACE/tracemf.h"  // TRACE_CNTL, TRACE
+
+#include "cetlib_except/exception.h"
+#include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 #include <unistd.h>
@@ -6,14 +13,12 @@
 #include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <sstream>
-#include "artdaq-core/Utilities/ExceptionHandler.hh"
-#include "cetlib_except/exception.h"
-#include "fhiclcpp/ParameterSet.h"
-#define TRACE_NAME "configureMessageFacility"
-#include "TRACE/tracemf.h"  // TRACE_CNTL, TRACE
+#include <unordered_map>
+#include <vector>
 
 namespace BFS = boost::filesystem;
 
+// clang-format off
 namespace {
 /**
  * \brief Make a fhicl::ParameterSet from a string (shim for compatibility)
@@ -24,7 +29,8 @@ fhicl::ParameterSet make_pset(std::string const& config_str)
 {
 	return fhicl::ParameterSet::make(config_str);
 }
-}  // namespace
+}  // namespace ""
+// clang-format on
 
 std::string artdaq::generateMessageFacilityConfiguration(char const* progname, bool useConsole, bool printDebug, char const* fileExtraName)
 {
@@ -128,7 +134,7 @@ std::string artdaq::generateMessageFacilityConfiguration(char const* progname, b
 		}
 		else
 		{
-			char c[10];
+			char c[10];  // NOLINT(modernize-avoid-c-arrays)
 			sprintf(c, "%06i", std::stoi(run_number));
 			ss << " pattern: \"" << progname << "-" << c << fileExtraName << filenameSuffix
 			   << "\"";
@@ -179,7 +185,7 @@ std::string artdaq::generateMessageFacilityConfiguration(char const* progname, b
 		ExceptionHandler(ExceptionHandlerRethrow::yes, std::string("Exception occurred while processing fhicl ParameterSet string ") + pstr + ":");
 	}
 	return tmp_pset.to_string();
-}
+}  // NOLINT(readability/fn_size)
 // generateMessageFacilityConfiguration
 
 void artdaq::configureTRACE(fhicl::ParameterSet& trace_pset)
@@ -250,7 +256,7 @@ void artdaq::configureTRACE(fhicl::ParameterSet& trace_pset)
 					auto msks = lvls_pset.get<std::vector<double>>(tname);
 					for (auto msk : msks)
 					{
-						lvlsbldr << " 0x" << std::hex << static_cast<unsigned long long>(msk);  // NOLINT(google-runtime-int)
+						lvlsbldr << " 0x" << std::hex << static_cast<unsigned long long>(msk);  // NOLINT
 					}
 					lvlsbldr << "\n";
 				}
@@ -302,7 +308,7 @@ std::string artdaq::setMsgFacAppName(const std::string& appType, unsigned short 
 {
 	std::string appName(appType);
 
-	char hostname[256];
+	char hostname[256];  // NOLINT(modernize-avoid-c-arrays)
 	if (gethostname(&hostname[0], 256) == 0)
 	{
 		std::string hostString(hostname);

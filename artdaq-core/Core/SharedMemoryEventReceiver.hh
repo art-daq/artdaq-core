@@ -1,11 +1,13 @@
-#ifndef artdaq_core_Core_SharedMemoryEventReceiver_hh
-#define artdaq_core_Core_SharedMemoryEventReceiver_hh 1
-
-#include <set>
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYEVENTRECEIVER_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYEVENTRECEIVER_HH_
 
 #include "artdaq-core/Core/SharedMemoryManager.hh"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/RawEvent.hh"
+
+#include <memory>
+#include <set>
+#include <string>
 
 namespace artdaq {
 /**
@@ -19,7 +21,7 @@ public:
 	 * \param shm_key Key of the Shared Memory segment
 	 * \param broadcast_shm_key Key of the broadcast Shared Memory segment
 	 */
-	SharedMemoryEventReceiver(uint32_t shm_key, uint32_t broadcast_shm_key);
+	SharedMemoryEventReceiver(key_t shm_key, key_t broadcast_shm_key);
 	/**
 	 * \brief SharedMemoryEventReceiver Destructor
 	 */
@@ -113,4 +115,4 @@ private:
 };
 }  // namespace artdaq
 
-#endif /* artdaq_core_Core_SharedMemoryEventReceiver_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_CORE_SHAREDMEMORYEVENTRECEIVER_HH_

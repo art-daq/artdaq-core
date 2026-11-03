@@ -1,5 +1,5 @@
-#ifndef artdaq_core_Plugins_FragmentGenerator_hh
-#define artdaq_core_Plugins_FragmentGenerator_hh
+#ifndef ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_FRAGMENTGENERATOR_HH_
+#define ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_FRAGMENTGENERATOR_HH_
 
 ////////////////////////////////////////////////////////////////////////
 // FragmentGenerator is an abstract class that defines the interface for
@@ -11,6 +11,8 @@
 ////////////////////////////////////////////////////////////////////////
 
 #include "artdaq-core/Data/Fragment.hh"
+
+#include <vector>
 
 namespace artdaq {
 /**
@@ -60,4 +62,4 @@ private:
 };
 }  // namespace artdaq
 
-#endif /* artdaq_core_Plugins_FragmentGenerator_hh */
+#endif  // ARTDAQ_CORE_ARTDAQ_CORE_PLUGINS_FRAGMENTGENERATOR_HH_
